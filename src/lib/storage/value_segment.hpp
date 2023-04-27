@@ -46,6 +46,12 @@ class ValueSegment : public AbstractSegment {
 
  protected:
   // Implementation goes here
+  // Is this segment nullable?
+  bool _is_nullable;
+  // All values, unspecified entry for null values
+  std::vector<T> _values;
+  // One bool for each value: false for valid, true for invalid values (i.e. NULL)
+  std::vector<bool> _null_values;
 };
 
 EXPLICITLY_DECLARE_DATA_TYPES(ValueSegment);
