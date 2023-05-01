@@ -32,6 +32,19 @@ TEST_F(StorageChunkTest, AddSegmentToChunk) {
   EXPECT_EQ(chunk.size(), 3);
 }
 
+TEST_F(StorageChunkTest, AddNullValue) {
+  std::shared_ptr<ValueSegment<int32_t>> int_nullable_value_segment{};
+  int_nullable_value_segment = std::make_shared<ValueSegment<int32_t>>(true);
+  int_nullable_value_segment->append(4);
+  int_nullable_value_segment->append(NULL_VALUE);
+  int_nullable_value_segment->append(3);
+
+  chunk.add_segment(int_nullable_value_segment);
+  chunk.add_segment(string_value_segment);
+  chunk.append({NULL_VALUE, "two"});
+  EXPECT_EQ(chunk.size(), 4);
+}
+
 TEST_F(StorageChunkTest, AddValuesToChunk) {
   chunk.add_segment(int_value_segment);
   chunk.add_segment(string_value_segment);
