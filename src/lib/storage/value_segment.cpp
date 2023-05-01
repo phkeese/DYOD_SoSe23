@@ -10,7 +10,6 @@ ValueSegment<T>::ValueSegment(bool nullable):
       _is_nullable{nullable},
       _values{}, _null_values{}
 {
-  // Implementation goes here
 }
 
 template <typename T>

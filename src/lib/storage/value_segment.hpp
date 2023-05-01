@@ -45,7 +45,6 @@ class ValueSegment : public AbstractSegment {
   size_t estimate_memory_usage() const final;
 
  protected:
-  // Implementation goes here
   // Is this segment nullable?
   bool _is_nullable;
   // All values, unspecified entry for null values
