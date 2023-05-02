@@ -4,43 +4,59 @@
 
 namespace opossum {
 
+static std::unique_ptr<StorageManager> STORAGE_MANAGER_SINGLETON = nullptr;
+
 StorageManager& StorageManager::get() {
-  return *(new StorageManager());
-  // A really hacky fix to get the tests to run - replace this with your implementation
+  if (!STORAGE_MANAGER_SINGLETON) {
+    STORAGE_MANAGER_SINGLETON = std::unique_ptr<StorageManager>(new StorageManager());
+  }
+  return *STORAGE_MANAGER_SINGLETON;
 }
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
-  // Implementation goes here
-  Fail("Implementation is missing.");
+  _tables.insert({name, table});
 }
 
 void StorageManager::drop_table(const std::string& name) {
-  // Implementation goes here
-  Fail("Implementation is missing.");
+  if (!_tables.erase(name)) {
+    throw std::logic_error{"table does not exist"};
+  }
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
-  // Implementation goes here
-  Fail("Implementation is missing.");
+  return _tables.at(name);
 }
 
 bool StorageManager::has_table(const std::string& name) const {
-  // Implementation goes here
-  Fail("Implementation is missing.");
+  return _tables.find(name) != _tables.end();
 }
 
 std::vector<std::string> StorageManager::table_names() const {
-  // Implementation goes here
-  Fail("Implementation is missing.");
+  auto keys = std::vector<std::string>{};
+  keys.reserve(_tables.size());
+  for (const auto& name_table : _tables) {
+    keys.push_back(name_table.first);
+  }
+  return keys;
 }
 
 void StorageManager::print(std::ostream& out) const {
-  // Implementation goes here
-  Fail("Implementation is missing.");
+  // format: (name, #columns, #rows, #chunks)
+  for (const auto& name_table: _tables) {
+
+    const auto table = name_table.second;
+    out << "("
+        << name_table.first << ", "
+        << table->column_count() << ", "
+        << table->row_count() << ", "
+        << table->chunk_count()
+        << ")";
+  }
+
 }
 
 void StorageManager::reset() {
-  // Implementation goes here
+  STORAGE_MANAGER_SINGLETON = nullptr;
 }
 
 }  // namespace opossum
