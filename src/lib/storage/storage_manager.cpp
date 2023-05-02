@@ -41,18 +41,11 @@ std::vector<std::string> StorageManager::table_names() const {
 }
 
 void StorageManager::print(std::ostream& out) const {
-  // format: (name, #columns, #rows, #chunks)
-  for (const auto& name_table: _tables) {
-
+  for (const auto& name_table : _tables) {
     const auto table = name_table.second;
-    out << "("
-        << name_table.first << ", "
-        << table->column_count() << ", "
-        << table->row_count() << ", "
-        << table->chunk_count()
-        << ")";
+    out << "(" << name_table.first << ", " << table->column_count() << ", " << table->row_count() << ", "
+        << table->chunk_count() << ")\n";
   }
-
 }
 
 void StorageManager::reset() {

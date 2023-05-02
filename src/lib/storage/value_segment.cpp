@@ -6,11 +6,7 @@
 namespace opossum {
 
 template <typename T>
-ValueSegment<T>::ValueSegment(bool nullable):
-      _is_nullable{nullable},
-      _values{}, _null_values{}
-{
-}
+ValueSegment<T>::ValueSegment(bool nullable) : _is_nullable{nullable}, _values{}, _null_values{} {}
 
 template <typename T>
 AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -70,7 +66,7 @@ void ValueSegment<T>::append(const AllTypeVariant& value) {
       throw std::logic_error{e.what()};
     } catch (boost::bad_get e) {
       throw std::logic_error{"because we don't like you"};
-    };
+    }
   }
 }
 
@@ -100,7 +96,7 @@ const std::vector<bool>& ValueSegment<T>::null_values() const {
 
 template <typename T>
 size_t ValueSegment<T>::estimate_memory_usage() const {
-    return values().size() * sizeof(T);
+  return values().size() * sizeof(T);
 }
 
 // Macro to instantiate the following classes:

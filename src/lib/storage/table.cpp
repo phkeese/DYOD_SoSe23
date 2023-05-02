@@ -1,14 +1,12 @@
 #include "table.hpp"
 
-#include "utils/assert.hpp"
 #include "resolve_type.hpp"
+#include "utils/assert.hpp"
 #include "value_segment.hpp"
 
 namespace opossum {
 
-Table::Table(const ChunkOffset target_chunk_size):
-    _max_chunk_size{target_chunk_size}
-{
+Table::Table(const ChunkOffset target_chunk_size) : _max_chunk_size{target_chunk_size} {
   create_new_chunk();
 }
 
@@ -25,8 +23,7 @@ void Table::add_column(const std::string& name, const std::string& type, const b
   add_column_definition(name, type, nullable);
   resolve_data_type(type, [&nullable, this](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
-    const auto value_segment =
-        std::make_shared<ValueSegment<ColumnDataType>>(nullable);
+    const auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(nullable);
     // We only have one chunk since there are no values in the table.
     _chunks[0]->add_segment(value_segment);
   });
@@ -39,8 +36,7 @@ void Table::create_new_chunk() {
     const auto is_nullable = _column_nullable[index++];
     resolve_data_type(column_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      const auto value_segment =
-          std::make_shared<ValueSegment<ColumnDataType>>(is_nullable);
+      const auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(is_nullable);
       chunk->add_segment(value_segment);
     });
   }

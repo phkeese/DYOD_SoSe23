@@ -1,9 +1,8 @@
 #include "chunk.hpp"
-
+#include <memory>
 #include "abstract_segment.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
-#include <memory>
 
 namespace opossum {
 
