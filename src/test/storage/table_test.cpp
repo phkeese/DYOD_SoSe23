@@ -96,4 +96,17 @@ TEST_F(StorageTableTest, SegmentsNullable) {
   EXPECT_TRUE(value_segment_2->is_nullable());
 }
 
+TEST_F(StorageTableTest, AddColumnToFilledTable) {
+  table.append({4, "Hello,"});
+  table.append({6, "world"});
+  table.append({3, "!"});
+  EXPECT_THROW(table.add_column("col_3", "int", true), std::logic_error);
+}
+
+TEST_F(StorageTableTest, GetChunkConst) {
+  const auto& const_table = table;
+  const auto& chunk = const_table.get_chunk(ChunkID{0});
+  EXPECT_EQ(chunk->size(), 0);
+}
+
 }  // namespace opossum
