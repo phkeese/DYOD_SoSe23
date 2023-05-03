@@ -35,7 +35,7 @@ class StorageManager : private Noncopyable {
   StorageManager(StorageManager&&) = delete;
 
  protected:
-  StorageManager() {}
+  StorageManager() = default;
 
   StorageManager& operator=(StorageManager&&) = default;
 

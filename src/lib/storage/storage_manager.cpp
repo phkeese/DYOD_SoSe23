@@ -4,13 +4,10 @@
 
 namespace opossum {
 
-static std::unique_ptr<StorageManager> STORAGE_MANAGER_SINGLETON = nullptr;
-
 StorageManager& StorageManager::get() {
-  if (!STORAGE_MANAGER_SINGLETON) {
-    STORAGE_MANAGER_SINGLETON = std::unique_ptr<StorageManager>(new StorageManager());
-  }
-  return *STORAGE_MANAGER_SINGLETON;
+  // Not a static class member due to briefing in task instructions.
+  static auto singleton = StorageManager{};
+  return singleton;
 }
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
@@ -49,7 +46,7 @@ void StorageManager::print(std::ostream& out) const {
 }
 
 void StorageManager::reset() {
-  STORAGE_MANAGER_SINGLETON = nullptr;
+  get()._tables.clear();
 }
 
 }  // namespace opossum

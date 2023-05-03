@@ -12,7 +12,7 @@ Table::Table(const ChunkOffset target_chunk_size) : _max_chunk_size{target_chunk
 
 void Table::add_column_definition(const std::string& name, const std::string& type, const bool nullable) {
   if (row_count() > 0) {
-    throw std::logic_error{"Table already has values"};
+    throw std::logic_error{"table already has values"};
   }
   _column_names.push_back(name);
   _column_types.push_back(type);

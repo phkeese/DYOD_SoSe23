@@ -6,7 +6,7 @@
 namespace opossum {
 
 template <typename T>
-ValueSegment<T>::ValueSegment(bool nullable) : _is_nullable{nullable}, _values{}, _null_values{} {}
+ValueSegment<T>::ValueSegment(bool nullable) : _is_nullable{nullable} {}
 
 template <typename T>
 AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -80,11 +80,10 @@ bool ValueSegment<T>::is_nullable() const {
 
 template <typename T>
 const std::vector<bool>& ValueSegment<T>::null_values() const {
-  if (is_nullable()) {
-    return _null_values;
-  } else {
+  if (!is_nullable()) {
     throw std::logic_error{"ValueSegment is not nullable"};
   }
+  return _null_values;
 }
 
 template <typename T>
