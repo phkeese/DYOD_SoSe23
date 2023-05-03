@@ -7,6 +7,9 @@
 namespace opossum {
 
 void Chunk::add_segment(const std::shared_ptr<AbstractSegment> segment) {
+    if (std::find(_chunk_segments.begin(), _chunk_segments.end(), segment) != _chunk_segments.end()) {
+        throw std::logic_error{"cannot add segment to chunk twice"};
+    }
   _chunk_segments.push_back(segment);
 }
 
