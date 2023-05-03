@@ -13,36 +13,36 @@ AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const
   if (is_null(chunk_offset)) {
     return NULL_VALUE;
   }
-  return _values[chunk_offset];
+  return _values.at(chunk_offset);
 }
 
 template <typename T>
 bool ValueSegment<T>::is_null(const ChunkOffset chunk_offset) const {
-  return _is_nullable && _null_values[chunk_offset];
+  return _is_nullable && _null_values.at(chunk_offset);
 }
 
 template <typename T>
 T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
-  auto optional = get_typed_value(chunk_offset);
-  if (optional.has_value()) {
-    return optional.value();
+  const auto optional = get_typed_value(chunk_offset);
+  if (!optional.has_value()) {
+    throw std::logic_error{"value is NULL"};
   }
-  throw std::logic_error{"value is NULL"};
+  return optional.value();
 }
 
 template <typename T>
 std::optional<T> ValueSegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  auto variant = (*this)[chunk_offset];
+  const auto variant = operator[](chunk_offset);
   if (variant_is_null(variant)) {
     return std::nullopt;
   }
-  auto value = type_cast<T>(variant);
+  const auto value = type_cast<T>(variant);
   return std::make_optional(value);
 }
 
 template <typename T>
 void ValueSegment<T>::append(const AllTypeVariant& value) {
-  auto is_null = variant_is_null(value);
+  const auto is_null = variant_is_null(value);
   if (is_null && is_nullable()) {
     _null_values.push_back(true);
     _values.push_back(T{});

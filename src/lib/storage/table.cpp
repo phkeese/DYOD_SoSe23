@@ -31,9 +31,10 @@ void Table::add_column(const std::string& name, const std::string& type, const b
 
 void Table::create_new_chunk() {
   const auto chunk = std::make_shared<Chunk>();
-  auto index = 0;
-  for (const auto& column_type : _column_types) {
-    const auto is_nullable = _column_nullable[index++];
+  const auto size = _column_names.size();
+  for (size_t i = 0; i < size; i++) {
+    const auto is_nullable = _column_nullable[i];
+    const auto column_type = _column_types[i];
     resolve_data_type(column_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
       const auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(is_nullable);
