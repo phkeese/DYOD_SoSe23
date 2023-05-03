@@ -32,14 +32,14 @@ class Chunk : private Noncopyable {
   // for testing purposes only.
   void append(const std::vector<AllTypeVariant>& values);
 
-  // Add a value to a given abstract segment
-  void append_to_segment(const AllTypeVariant& value, const std::shared_ptr<AbstractSegment>& column);
-
   // Returns the segment at a given position.
   std::shared_ptr<AbstractSegment> get_segment(ColumnID column_id) const;
 
  protected:
   std::vector<std::shared_ptr<AbstractSegment>> _chunk_segments;
+
+  // Add a value to a given abstract segment
+  static void append_to_segment(const AllTypeVariant& value, const std::shared_ptr<AbstractSegment>& segment);
 };
 
 }  // namespace opossum
