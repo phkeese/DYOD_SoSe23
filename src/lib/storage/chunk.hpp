@@ -36,6 +36,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<AbstractSegment> get_segment(ColumnID column_id) const;
 
  protected:
+  // Segments of a chunk
   std::vector<std::shared_ptr<AbstractSegment>> _chunk_segments;
 
   // Add a value to a given abstract segment.

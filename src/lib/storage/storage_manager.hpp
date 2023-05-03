@@ -41,7 +41,7 @@ class StorageManager : private Noncopyable {
 
   StorageManager& operator=(StorageManager&&) = default;
 
-  // Maps table names to tables instances.
+  // Maps table names to table instances.
   std::unordered_map<std::string, std::shared_ptr<Table>> _tables;
 };
 
