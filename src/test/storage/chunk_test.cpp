@@ -113,8 +113,8 @@ TEST_F(StorageChunkTest, AddAllDataTypes) {
 }
 
 TEST_F(StorageChunkTest, AddSegmentTwice) {
-    chunk.add_segment(int_value_segment);
-    EXPECT_THROW(chunk.add_segment(int_value_segment), std::logic_error);
+  chunk.add_segment(int_value_segment);
+  EXPECT_THROW(chunk.add_segment(int_value_segment), std::logic_error);
 }
 
 }  // namespace opossum

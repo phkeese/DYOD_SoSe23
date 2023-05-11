@@ -6,24 +6,9 @@
 
 namespace opossum {
 
-void Chunk::add_segment(const std::shared_ptr<AbstractSegment> segment) {
-    if (std::find(_chunk_segments.begin(), _chunk_segments.end(), segment) != _chunk_segments.end()) {
-        throw std::logic_error{"cannot add segment to chunk twice"};
-    }
-  _chunk_segments.push_back(segment);
-}
-
-void Chunk::append(const std::vector<AllTypeVariant>& values) {
-  DebugAssert(values.size() == column_count(), "incorrect number of values");
-
-  for (size_t i = 0; i < values.size(); i++) {
-    const auto column = _chunk_segments[i];
-    const auto& value = values[i];
-    append_to_segment(value, column);
-  }
-}
-
-void Chunk::append_to_segment(const AllTypeVariant& value, const std::shared_ptr<AbstractSegment>& segment) {
+namespace {
+// Add a value to a given abstract segment.
+void append_to_segment(const AllTypeVariant& value, const std::shared_ptr<AbstractSegment>& segment) {
   // Test all possible ValueSegment variants.
   if (const auto concrete_i32 = std::dynamic_pointer_cast<ValueSegment<int32_t>>(segment)) {
     concrete_i32->append(value);
@@ -36,12 +21,31 @@ void Chunk::append_to_segment(const AllTypeVariant& value, const std::shared_ptr
   } else if (const auto concrete_string = std::dynamic_pointer_cast<ValueSegment<std::string>>(segment)) {
     concrete_string->append(value);
   } else {
-    throw std::logic_error{"not implemented"};
+    Fail("Datatype not implemented.");
+  }
+}
+}  // namespace
+
+void Chunk::add_segment(const std::shared_ptr<AbstractSegment> segment) {
+  Assert(std::find(_chunk_segments.begin(), _chunk_segments.end(), segment) == _chunk_segments.end(),
+         "Cannot add segment to chunk twice.");
+  _chunk_segments.push_back(segment);
+}
+
+void Chunk::append(const std::vector<AllTypeVariant>& values) {
+  const auto values_size = values.size();
+  DebugAssert(values_size == column_count(), "incorrect number of values");
+
+  for (auto segment_index = size_t{0}; segment_index < values_size; ++segment_index) {
+    const auto column = _chunk_segments[segment_index];
+    const auto& value = values[segment_index];
+    append_to_segment(value, column);
   }
 }
 
 std::shared_ptr<AbstractSegment> Chunk::get_segment(const ColumnID column_id) const {
-  return _chunk_segments.at(column_id);
+  Assert(column_id < _chunk_segments.size(), "Column with ID " + std::to_string(column_id) + " does not exist.");
+  return _chunk_segments[column_id];
 }
 
 ColumnCount Chunk::column_count() const {

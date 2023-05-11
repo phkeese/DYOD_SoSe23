@@ -10,34 +10,34 @@ ValueSegment<T>::ValueSegment(bool nullable) : _is_nullable{nullable} {}
 
 template <typename T>
 AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
-  if (is_null(chunk_offset)) {
-    return NULL_VALUE;
+  const auto value = get_typed_value(chunk_offset);
+  if (value) {
+    return value.value();
   }
-  return _values.at(chunk_offset);
+  return NULL_VALUE;
 }
 
 template <typename T>
 bool ValueSegment<T>::is_null(const ChunkOffset chunk_offset) const {
-  return _is_nullable && _null_values.at(chunk_offset);
+  Assert(chunk_offset < _null_values.size(),
+         "Null value at offset " + std::to_string(chunk_offset) + " does not exist.");
+  return _is_nullable && _null_values[chunk_offset];
 }
 
 template <typename T>
 T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
   const auto optional = get_typed_value(chunk_offset);
-  if (!optional.has_value()) {
-    throw std::logic_error{"value is NULL"};
-  }
+  Assert(optional, "Value is NULL.");
   return optional.value();
 }
 
 template <typename T>
 std::optional<T> ValueSegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  const auto variant = operator[](chunk_offset);
-  if (variant_is_null(variant)) {
+  if (is_null(chunk_offset)) {
     return std::nullopt;
   }
-  const auto value = type_cast<T>(variant);
-  return std::make_optional(value);
+  Assert(chunk_offset < _values.size(), "Value at offset " + std::to_string(chunk_offset) + " does not exist.");
+  return _values[chunk_offset];
 }
 
 template <typename T>
@@ -47,10 +47,7 @@ void ValueSegment<T>::append(const AllTypeVariant& value) {
     _null_values.push_back(true);
     _values.push_back(T{});
   } else {
-    if (is_null) {
-      throw std::logic_error{"cannot append null value to non-nullable ValueSegment"};
-    }
-
+    Assert(!is_null, "Cannot append null value to non-nullable ValueSegment.");
     try {
       auto typed_value = type_cast<T>(value);
       _values.push_back(typed_value);
@@ -80,9 +77,7 @@ bool ValueSegment<T>::is_nullable() const {
 
 template <typename T>
 const std::vector<bool>& ValueSegment<T>::null_values() const {
-  if (!is_nullable()) {
-    throw std::logic_error{"ValueSegment is not nullable"};
-  }
+  Assert(is_nullable(), "ValueSegment is not nullable.");
   return _null_values;
 }
 
