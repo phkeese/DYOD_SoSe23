@@ -55,7 +55,11 @@ ColumnCount Table::column_count() const {
 }
 
 uint64_t Table::row_count() const {
-  return (_chunks.size() - 1) * _max_chunk_size + _chunks.back()->size();
+  auto chunk_size = size_t{0};
+  for (const auto& chunk : _chunks) {
+    chunk_size += chunk->size();
+  }
+  return chunk_size;
 }
 
 ChunkID Table::chunk_count() const {

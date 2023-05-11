@@ -109,4 +109,25 @@ TEST_F(StorageTableTest, GetChunkConst) {
   EXPECT_EQ(chunk->size(), 0);
 }
 
+TEST_F(StorageTableTest, DYODWeek4Second) {
+  auto table = Table{17};
+  table.add_column("col_1", "int", false);
+  table.append({1});
+  EXPECT_EQ(table.row_count(), 1);
+  EXPECT_EQ(table.chunk_count(), 1);
+
+  table.append({2});
+  EXPECT_EQ(table.row_count(), 2);
+  EXPECT_EQ(table.chunk_count(), 1);
+
+  table.create_new_chunk();
+  EXPECT_EQ(table.row_count(), 2);
+  EXPECT_EQ(table.chunk_count(), 2);
+
+  table.append({3});
+  EXPECT_EQ(table.row_count(), 3);
+  EXPECT_EQ(table.chunk_count(), 2);
+}
+
+
 }  // namespace opossum
