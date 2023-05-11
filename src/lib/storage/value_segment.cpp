@@ -83,7 +83,7 @@ const std::vector<bool>& ValueSegment<T>::null_values() const {
 
 template <typename T>
 size_t ValueSegment<T>::estimate_memory_usage() const {
-  return values().size() * sizeof(T);
+  return values().capacity() * sizeof(T);
 }
 
 // Macro to instantiate the following classes:
