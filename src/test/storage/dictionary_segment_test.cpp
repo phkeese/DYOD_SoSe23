@@ -70,4 +70,37 @@ TEST_F(StorageDictionarySegmentTest, LowerUpperBound) {
 
 // TODO(student): You should add some more tests here (full coverage would be appreciated) and possibly in other files.
 
+TEST_F(StorageDictionarySegmentTest, CompressEmptySegment) {
+  const auto dict_segment = std::make_shared<DictionarySegment<std::string>>(value_segment_str);
+  EXPECT_EQ(dict_segment->size(), 0);
+  EXPECT_EQ(dict_segment->unique_values_count(), 0);
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), 0);
+}
+
+TEST_F(StorageDictionarySegmentTest, OperatorBracketsAccess) {
+  value_segment_str->append("This");
+  value_segment_str->append("is");
+  value_segment_str->append("just");
+  value_segment_str->append("a");
+  value_segment_str->append("test");
+  value_segment_str->append("!");
+
+  const auto dict_segment = std::make_shared<DictionarySegment<std::string>>(value_segment_str);
+  EXPECT_EQ(dict_segment->operator[](0), AllTypeVariant{"This"});
+  EXPECT_EQ(dict_segment->operator[](1), AllTypeVariant{"is"});
+  EXPECT_EQ(dict_segment->operator[](2), AllTypeVariant{"just"});
+  EXPECT_EQ(dict_segment->operator[](3), AllTypeVariant{"a"});
+  EXPECT_EQ(dict_segment->operator[](4), AllTypeVariant{"test"});
+  EXPECT_EQ(dict_segment->operator[](5), AllTypeVariant{"!"});
+}
+
+TEST_F(StorageDictionarySegmentTest, OutOfBoundsChecking) {
+  value_segment_str->append("Hello World!");
+
+  const auto dict_segment = std::make_shared<DictionarySegment<std::string>>(value_segment_str);
+  EXPECT_THROW(dict_segment->operator[](1), std::logic_error);
+  EXPECT_THROW(dict_segment->get_typed_value(1), std::logic_error);
+  EXPECT_THROW(dict_segment->get(1), std::logic_error);
+}
+
 }  // namespace opossum

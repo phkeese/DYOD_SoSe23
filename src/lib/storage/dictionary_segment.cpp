@@ -111,8 +111,10 @@ ValueID DictionarySegment<T>::null_value_id() const {
 template <typename T>
 const T DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
   DebugAssert(value_id != null_value_id(), "ValueID " + std::to_string(value_id) + " is reserved for NULL values.");
-  DebugAssert(value_id < _dictionary.size(), "ValueID " + std::to_string(value_id) + " is out of range.");
-  return _dictionary[value_id - 1];
+  // null_value_id is 0, so every other index is off by one.
+  const auto value_id_without_null = ValueID{value_id - 1};
+  DebugAssert(value_id_without_null < _dictionary.size(), "ValueID " + std::to_string(value_id) + " is out of range.");
+  return _dictionary[value_id_without_null];
 }
 
 template <typename T>
