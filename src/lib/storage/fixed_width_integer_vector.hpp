@@ -34,8 +34,8 @@ class FixedWidthIntegerVector : public AbstractAttributeVector {
 };
 
 // Explicitly instantiate types
-template class FixedWidthIntegerVector<uint32_t>;
-template class FixedWidthIntegerVector<uint16_t>;
-template class FixedWidthIntegerVector<uint8_t>;
+extern template class FixedWidthIntegerVector<uint32_t>;
+extern template class FixedWidthIntegerVector<uint16_t>;
+extern template class FixedWidthIntegerVector<uint8_t>;
 
 }  // namespace opossum

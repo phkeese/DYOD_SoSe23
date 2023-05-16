@@ -10,6 +10,8 @@ set(
         storage/chunk.hpp
         storage/dictionary_segment.cpp
         storage/dictionary_segment.hpp
+        storage/fixed_width_integer_vector.cpp
+        storage/fixed_width_integer_vector.hpp
         storage/storage_manager.cpp
         storage/storage_manager.hpp
         storage/table.cpp
@@ -31,7 +33,7 @@ set(
 )
 
 # Configure the regular opossum library used for tests/server/playground...
-add_library(opossum STATIC ${SOURCES} storage/fixed_width_integer_vector.hpp storage/fixed_width_integer_vector.cpp)
+add_library(opossum STATIC ${SOURCES})
 target_link_libraries(opossum ${LIBRARIES})
 
 # Configure the lib used for sanitizers

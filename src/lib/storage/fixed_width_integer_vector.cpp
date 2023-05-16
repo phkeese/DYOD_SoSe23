@@ -36,4 +36,9 @@ FixedWidthIntegerVector<T>::FixedWidthIntegerVector(const std::vector<ValueID>& 
     _value_ids.push_back(as_t);
   }
 }
+
+template class FixedWidthIntegerVector<uint32_t>;
+template class FixedWidthIntegerVector<uint16_t>;
+template class FixedWidthIntegerVector<uint8_t>;
+
 }  // namespace opossum
