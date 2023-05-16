@@ -8,7 +8,8 @@ template <typename T>
 class FixedWidthIntegerVector : public AbstractAttributeVector {
  public:
   FixedWidthIntegerVector() = default;
-  FixedWidthIntegerVector(T size);
+  FixedWidthIntegerVector(size_t size);
+  FixedWidthIntegerVector(const std::vector<ValueID>& values);
   virtual ~FixedWidthIntegerVector() = default;
 
   // We need to explicitly set the move constructor to default when we overwrite the copy constructor.
@@ -29,10 +30,12 @@ class FixedWidthIntegerVector : public AbstractAttributeVector {
 
  private:
   // Stores ValueIDs for all original elements.
-  std::vector<ValueID> _value_ids;
+  std::vector<T> _value_ids;
 };
 
 // Explicitly instantiate types
 template class FixedWidthIntegerVector<uint32_t>;
+template class FixedWidthIntegerVector<uint16_t>;
+template class FixedWidthIntegerVector<uint8_t>;
 
 }  // namespace opossum

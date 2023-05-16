@@ -19,9 +19,12 @@ AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const
 
 template <typename T>
 bool ValueSegment<T>::is_null(const ChunkOffset chunk_offset) const {
+  if (!_is_nullable) {
+    return false;
+  }
   Assert(chunk_offset < _null_values.size(),
          "Null value at offset " + std::to_string(chunk_offset) + " does not exist.");
-  return _is_nullable && _null_values[chunk_offset];
+  return _null_values[chunk_offset];
 }
 
 template <typename T>

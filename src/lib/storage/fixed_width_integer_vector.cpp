@@ -22,10 +22,18 @@ AttributeVectorWidth FixedWidthIntegerVector<T>::width() const {
 template <typename T>
 ValueID FixedWidthIntegerVector<T>::get(const size_t index) const {
   Assert(index < _value_ids.size(), "Index " + std::to_string(index) + " is out of range.");
-  return _value_ids[index];
+  return ValueID{_value_ids[index]};
 }
 
 template <typename T>
-FixedWidthIntegerVector<T>::FixedWidthIntegerVector(T size) : _value_ids{size} {}
+FixedWidthIntegerVector<T>::FixedWidthIntegerVector(size_t size) : _value_ids(size) {}
 
+template <typename T>
+FixedWidthIntegerVector<T>::FixedWidthIntegerVector(const std::vector<ValueID>& values) {
+  _value_ids.reserve(values.size());
+  for (const auto value : values) {
+    const auto as_t = T(value);
+    _value_ids.push_back(as_t);
+  }
+}
 }  // namespace opossum

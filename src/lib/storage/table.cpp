@@ -106,8 +106,8 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
 }
 
 void Table::compress_chunk(const ChunkID chunk_id) {
-  // Implementation goes here
-  Fail("Implementation is missing.");
+  // auto threads = std::vector<std::jthread<
+  Fail("Hi");
 }
 
 }  // namespace opossum

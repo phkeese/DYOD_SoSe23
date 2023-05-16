@@ -60,6 +60,9 @@ class DictionarySegment : public AbstractSegment {
   size_t estimate_memory_usage() const final;
 
  protected:
+
+  std::shared_ptr<AbstractAttributeVector> _compress(const std::shared_ptr<AbstractSegment>& abstract_segment);
+  std::shared_ptr<AbstractAttributeVector> _compress_attribute_vector(const std::vector<ValueID>& attribute_list);
   std::vector<T> _dictionary;
   std::shared_ptr<AbstractAttributeVector> _attribute_vector;
 };
