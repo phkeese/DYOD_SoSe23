@@ -9,15 +9,23 @@
 namespace opossum {
 
 template <typename T>
-DictionarySegment<T>::DictionarySegment(const std::shared_ptr<AbstractSegment>& abstract_segment) : _attribute_vector{_compress(abstract_segment)} {}
+DictionarySegment<T>::DictionarySegment(const std::shared_ptr<AbstractSegment>& abstract_segment) {
+  _compress(abstract_segment);
+}
 
 template <typename T>
-std::shared_ptr<AbstractAttributeVector> DictionarySegment<T>::_compress(
+void DictionarySegment<T>::_compress(
     const std::shared_ptr<AbstractSegment>& abstract_segment) {
+  _create_dictionary(abstract_segment);
+  _create_attribute_vector(abstract_segment);
+}
 
-  // 1. Insert all values into an ordered map
+template <typename T>
+void DictionarySegment<T>::_create_dictionary(const std::shared_ptr<AbstractSegment>& abstract_segment) {
   auto unique_values = std::set<T>();
   const auto size = abstract_segment->size();
+
+  // Insert all values into an ordered map.
   for (auto index = ChunkOffset{0}; index < size; ++index) {
     const auto variant = abstract_segment->operator[](index);
     if (variant_is_null(variant)) {
@@ -27,35 +35,44 @@ std::shared_ptr<AbstractAttributeVector> DictionarySegment<T>::_compress(
     unique_values.insert(typed_value);
   }
 
-  // 2. Iterate over values again to get index and save that in the attribute_list
+  // Create the sorted dictionary from ordered map.
+  _dictionary.reserve(unique_values.size());
+  for (const auto& value : unique_values) {
+    _dictionary.push_back(value);
+  }
+}
+
+template <typename T>
+void DictionarySegment<T>::_create_attribute_vector(
+    const std::shared_ptr<AbstractSegment>& abstract_segment) {
   auto attribute_list = std::vector<ValueID>();
+  const auto size = abstract_segment->size();
   attribute_list.reserve(size);
+
+  // Iterate over values again to get index and save that in the attribute_list.
   for (auto index = ChunkOffset{0}; index < size; ++index) {
     const auto variant = abstract_segment->operator[](index);
     if (variant_is_null(variant)) {
       attribute_list.push_back(null_value_id());
-      continue ;
+      continue;
     }
     const auto typed_value = type_cast<T>(variant);
-    const auto it = unique_values.find(typed_value);
-    DebugAssert(it != unique_values.end(), "Inserted value not in set of unique values.");
-    const auto dictionary_index = std::distance(unique_values.begin(), it) + 1; // +1 to account for null_value_id()
+    const auto it = std::find(_dictionary.begin(), _dictionary.end(), typed_value);
+    DebugAssert(it != _dictionary.end(), "Inserted value not in the set of unique values.");
+    // + 1 to account for null_value_id().
+    const auto dictionary_index = std::distance(_dictionary.begin(), it) + 1;
     attribute_list.push_back(ValueID(dictionary_index));
   }
-
-  _dictionary.reserve(unique_values.size());
-  for (const auto & value : unique_values) {
-    _dictionary.push_back(value);
-  }
-
-  return _compress_attribute_vector(attribute_list);
+  _compress_attribute_vector(attribute_list);
 }
 
 template <typename T>
-std::shared_ptr<AbstractAttributeVector> DictionarySegment<T>::_compress_attribute_vector(
+void DictionarySegment<T>::_compress_attribute_vector(
     const std::vector<ValueID>& attribute_list) {
-  const auto total_number_of_values = _dictionary.size() + 1; // +1 due to null value
+  // +1 due to null value
+  const auto total_number_of_values = _dictionary.size() + 1;
   auto compressed_attribute_list = std::shared_ptr<AbstractAttributeVector>();
+
   if (total_number_of_values <= std::numeric_limits<uint8_t>::max()) {
     compressed_attribute_list = std::make_shared<FixedWidthIntegerVector<uint8_t>>(attribute_list);
   } else if (total_number_of_values <= std::numeric_limits<uint16_t>::max()) {
@@ -63,10 +80,12 @@ std::shared_ptr<AbstractAttributeVector> DictionarySegment<T>::_compress_attribu
   } else if (total_number_of_values <= std::numeric_limits<uint32_t>::max()) {
     compressed_attribute_list = std::make_shared<FixedWidthIntegerVector<uint32_t>>(attribute_list);
   } else {
-    Fail("Too many unique values in dictionary segment (" + std::to_string(total_number_of_values) + " unique values).");
+    Fail("Too many unique values in dictionary segment (" + std::to_string(total_number_of_values) +
+         " unique values).");
   }
-  return compressed_attribute_list;
+  _attribute_vector = compressed_attribute_list;
 }
+
 
 template <typename T>
 AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
