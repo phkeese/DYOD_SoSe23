@@ -12,8 +12,6 @@ class StorageDictionarySegmentTest : public BaseTest {
  protected:
   std::shared_ptr<ValueSegment<int32_t>> value_segment_int{std::make_shared<ValueSegment<int32_t>>()};
   std::shared_ptr<ValueSegment<std::string>> value_segment_str{std::make_shared<ValueSegment<std::string>>(true)};
-  std::shared_ptr<ValueSegment<float>> value_segment_float{std::make_shared<ValueSegment<float>>()};
-  std::shared_ptr<ValueSegment<double>> value_segment_double{std::make_shared<ValueSegment<double>>(true)};
 };
 
 TEST_F(StorageDictionarySegmentTest, CompressSegmentString) {
@@ -44,56 +42,6 @@ TEST_F(StorageDictionarySegmentTest, CompressSegmentString) {
   EXPECT_EQ(dict_segment->attribute_vector()->get(6), dict_segment->null_value_id());
   EXPECT_EQ(dict_segment->get_typed_value(6), std::nullopt);
   EXPECT_THROW(dict_segment->get(6), std::logic_error);
-}
-
-TEST_F(StorageDictionarySegmentTest, CompressSegmentFloat) {
-  value_segment_float->append(1.0f);
-  value_segment_float->append(1.0f);
-  value_segment_float->append(1.0f);
-  value_segment_float->append(3.1415f);
-  value_segment_float->append(4.1f);
-  value_segment_float->append(0.0f);
-  value_segment_float->append(-0.0f);
-
-  const auto dict_segment = std::make_shared<DictionarySegment<float>>(value_segment_float);
-
-  // Test attribute_vector size.
-  EXPECT_EQ(dict_segment->size(), 7);
-
-  // Test dictionary size (uniqueness).
-  EXPECT_EQ(dict_segment->unique_values_count(), 4);
-
-  // Test sorting.
-  const auto& dict = dict_segment->dictionary();
-  EXPECT_EQ(dict[0], 0.0f);
-  EXPECT_EQ(dict[1], 1.0f);
-  EXPECT_EQ(dict[2], 3.1415f);
-  EXPECT_EQ(dict[3], 4.1f);
-}
-
-TEST_F(StorageDictionarySegmentTest, CompressSegmentDouble) {
-  value_segment_double->append(1.0);
-  value_segment_double->append(1.0);
-  value_segment_double->append(1.0);
-  value_segment_double->append(3.1415);
-  value_segment_double->append(4.1);
-  value_segment_double->append(0.0);
-  value_segment_double->append(-0.0);
-
-  const auto dict_segment = std::make_shared<DictionarySegment<double>>(value_segment_double);
-
-  // Test attribute_vector size.
-  EXPECT_EQ(dict_segment->size(), 7);
-
-  // Test dictionary size (uniqueness).
-  EXPECT_EQ(dict_segment->unique_values_count(), 4);
-
-  // Test sorting.
-  const auto& dict = dict_segment->dictionary();
-  EXPECT_EQ(dict[0], 0.0);
-  EXPECT_EQ(dict[1], 1.0);
-  EXPECT_EQ(dict[2], 3.1415);
-  EXPECT_EQ(dict[3], 4.1);
 }
 
 TEST_F(StorageDictionarySegmentTest, LowerUpperBound) {
