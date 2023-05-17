@@ -15,6 +15,7 @@ set(
     storage/storage_manager_test.cpp
     storage/table_test.cpp
     storage/value_segment_test.cpp
+    storage/fixed_width_integer_vector_test.cpp
 )
 
 # Both opossumTest and opossumSanitizers link against these
@@ -42,11 +43,11 @@ set(
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure opossumTest
-add_executable(opossumTest ${OPOSSUM_TEST_SOURCES} storage/fixed_width_integer_vector_test.cpp)
+add_executable(opossumTest ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumTest opossum ${LIBRARIES})
 
 # Configure opossumCoverageApp
-add_executable(opossumCoverage EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES} storage/fixed_width_integer_vector_test.cpp)
+add_executable(opossumCoverage EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumCoverage opossumCoverageLib ${LIBRARIES} --coverage)
 set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
 

@@ -5,8 +5,20 @@
 namespace opossum {
 
 template <typename T>
+FixedWidthIntegerVector<T>::FixedWidthIntegerVector(size_t size) : _value_ids(size) {}
+
+template <typename T>
+FixedWidthIntegerVector<T>::FixedWidthIntegerVector(const std::vector<ValueID>& values) {
+  _value_ids.reserve(values.size());
+  for (const auto value : values) {
+    const auto as_t = T(value);
+    _value_ids.push_back(as_t);
+  }
+}
+
+template <typename T>
 void FixedWidthIntegerVector<T>::set(const size_t index, const ValueID value_id) {
-  Assert(index < _value_ids.size(), "Index " + std::to_string(index) + " is out of range.");
+  Assert(index < size(), "Index " + std::to_string(index) + " is out of range.");
   _value_ids[index] = value_id;
 }
 
@@ -22,20 +34,8 @@ AttributeVectorWidth FixedWidthIntegerVector<T>::width() const {
 
 template <typename T>
 ValueID FixedWidthIntegerVector<T>::get(const size_t index) const {
-  Assert(index < _value_ids.size(), "Index " + std::to_string(index) + " is out of range.");
+  Assert(index < size(), "Index " + std::to_string(index) + " is out of range.");
   return ValueID{_value_ids[index]};
-}
-
-template <typename T>
-FixedWidthIntegerVector<T>::FixedWidthIntegerVector(size_t size) : _value_ids(size) {}
-
-template <typename T>
-FixedWidthIntegerVector<T>::FixedWidthIntegerVector(const std::vector<ValueID>& values) {
-  _value_ids.reserve(values.size());
-  for (const auto value : values) {
-    const auto as_t = T(value);
-    _value_ids.push_back(as_t);
-  }
 }
 
 std::shared_ptr<AbstractAttributeVector> compress_attribute_vector(const std::vector<ValueID>& attribute_list) {

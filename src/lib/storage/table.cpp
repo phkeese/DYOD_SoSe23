@@ -131,6 +131,8 @@ void Table::compress_chunk(const ChunkID chunk_id) {
     Fail("Invalid type for compression.");
   };
 
+  Assert(chunk_id < chunk_count(), "Cannot compress chunk with Id " + std::to_string(chunk_id) + " out of bounce.");
+
   // Immediately create new chunk to stop modification of the currently compressing chunk.
   create_new_chunk();
 
