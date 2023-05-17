@@ -1,5 +1,8 @@
 #include "table.hpp"
 
+#include <future>
+#include <thread>
+#include "dictionary_segment.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
@@ -106,8 +109,58 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
 }
 
 void Table::compress_chunk(const ChunkID chunk_id) {
-  // auto threads = std::vector<std::jthread<
-  Fail("Hi");
+  // Typedef to limit word vomit
+  using abstract_ptr = std::shared_ptr<AbstractSegment>;
+
+  auto compress_segment = [](abstract_ptr segment) -> abstract_ptr {
+#define TRY_COMPRESS_TYPE(Type, Segment)                        \
+  if (std::dynamic_pointer_cast<ValueSegment<Type>>(Segment)) { \
+    return std::make_shared<DictionarySegment<Type>>(Segment);  \
+  }
+
+    // Explicitly try to convert for each data type using macros for better readability
+    TRY_COMPRESS_TYPE(int32_t, segment);
+    TRY_COMPRESS_TYPE(int64_t, segment);
+    TRY_COMPRESS_TYPE(std::string, segment);
+    TRY_COMPRESS_TYPE(float, segment);
+    TRY_COMPRESS_TYPE(double, segment);
+
+#undef TRY_COMPRESS_TYPE
+
+    Fail("Invalid type for compression.");
+  };
+
+  // Immediately create new chunk to stop modification of the currently compressing chunk.
+  create_new_chunk();
+
+  // Keep currently compressing chunk for reading.
+  auto chunk = get_chunk(chunk_id);
+  auto segment_count = chunk->column_count();
+  auto futures = std::vector<std::future<abstract_ptr>>{};
+  futures.reserve(segment_count);
+
+  for (auto index = ColumnID{0}; index < segment_count; ++index) {
+    auto segment = chunk->get_segment(index);
+    auto task = std::packaged_task<abstract_ptr(abstract_ptr)>(compress_segment);
+    auto future = task.get_future();
+    auto thread = std::thread(std::move(task), segment);
+
+    // Allow execution to continue in the background.
+    futures.push_back(std::move(future));
+    thread.detach();
+  }
+
+  // Create new empty chunk and append segments to it.
+  auto compressed_chunk = std::make_shared<Chunk>();
+  for (auto& future : futures) {
+    future.wait();
+    auto compressed_segment = future.get();
+    compressed_chunk->add_segment(compressed_segment);
+  }
+
+  // Swap out old chunk with compressed chunk. Old chunk will stay valid until all references to it are dropped.
+  // Since we force appends into a new chunk before compression, this should not lead to any data races.
+  _chunks[chunk_id] = compressed_chunk;
 }
 
 }  // namespace opossum
