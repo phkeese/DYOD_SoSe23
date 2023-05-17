@@ -96,6 +96,39 @@ TEST_F(StorageTableTest, SegmentsNullable) {
   EXPECT_TRUE(value_segment_2->is_nullable());
 }
 
+TEST_F(StorageTableTest, AddColumnToFilledTable) {
+  table.append({4, "Hello,"});
+  table.append({6, "world"});
+  table.append({3, "!"});
+  EXPECT_THROW(table.add_column("col_3", "int", true), std::logic_error);
+}
+
+TEST_F(StorageTableTest, GetChunkConst) {
+  const auto& const_table = table;
+  const auto& chunk = const_table.get_chunk(ChunkID{0});
+  EXPECT_EQ(chunk->size(), 0);
+}
+
+TEST_F(StorageTableTest, DYODWeek4Second) {
+  auto table = Table{17};
+  table.add_column("col_1", "int", false);
+  table.append({1});
+  EXPECT_EQ(table.row_count(), 1);
+  EXPECT_EQ(table.chunk_count(), 1);
+
+  table.append({2});
+  EXPECT_EQ(table.row_count(), 2);
+  EXPECT_EQ(table.chunk_count(), 1);
+
+  table.create_new_chunk();
+  EXPECT_EQ(table.row_count(), 2);
+  EXPECT_EQ(table.chunk_count(), 2);
+
+  table.append({3});
+  EXPECT_EQ(table.row_count(), 3);
+  EXPECT_EQ(table.chunk_count(), 2);
+}
+
 TEST_F(StorageTableTest, AppendWithEncodedSegments) {
   table.append({1, "foo"});
   EXPECT_EQ(table.row_count(), 1);

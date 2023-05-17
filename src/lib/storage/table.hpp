@@ -67,7 +67,16 @@ class Table : private Noncopyable {
   void compress_chunk(const ChunkID chunk_id);
 
  protected:
-  // Implementation goes here
+  // Maximum number of tuples stored in one chunk
+  ChunkOffset _max_chunk_size;
+  // Names of the columns, in order of insertion
+  std::vector<std::string> _column_names;
+  // Types of the columns, in order of insertion (see oppossum::detail::type_strings for possible values)
+  std::vector<std::string> _column_types;
+  // Nullability of the columns, in order of insertion
+  std::vector<bool> _column_nullable;
+  // Chunks of the table
+  std::vector<std::shared_ptr<Chunk>> _chunks;
 };
 
 }  // namespace opossum

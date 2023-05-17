@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -35,11 +37,12 @@ class StorageManager : private Noncopyable {
   StorageManager(StorageManager&&) = delete;
 
  protected:
-  StorageManager() {}
+  StorageManager() = default;
 
   StorageManager& operator=(StorageManager&&) = default;
 
-  // Implementation goes here
+  // Maps table names to table instances.
+  std::unordered_map<std::string, std::shared_ptr<Table>> _tables;
 };
 
 }  // namespace opossum
