@@ -150,4 +150,8 @@ TEST_F(StorageTableTest, CompressChunkTwice) {
   EXPECT_THROW(table.compress_chunk(ChunkID{0}), std::logic_error);
 }
 
+TEST_F(StorageTableTest, EqualColumnNames) {
+  EXPECT_THROW(table.add_column_definition("col_1", "int", true), std::logic_error);
+}
+
 }  // namespace opossum

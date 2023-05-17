@@ -69,8 +69,6 @@ TEST_F(StorageDictionarySegmentTest, LowerUpperBound) {
   EXPECT_EQ(dict_segment->upper_bound(15), INVALID_VALUE_ID);
 }
 
-// TODO(student): You should add some more tests here (full coverage would be appreciated) and possibly in other files.
-
 TEST_F(StorageDictionarySegmentTest, CompressEmptySegment) {
   const auto dict_segment = std::make_shared<DictionarySegment<std::string>>(value_segment_str);
   EXPECT_EQ(dict_segment->size(), 0);
@@ -129,15 +127,18 @@ TEST_F(StorageDictionarySegmentTest, MemoryUsage) {
   value_segment_int->append(1);
 
   auto dict_segment = std::make_shared<DictionarySegment<int32_t>>(value_segment_int);
-  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{5}); // 4 byte for 1 * int32_t in dictionary + 1 byte for attribute_vector
+  // 4 bytes for 1 * int32_t in dictionary + 1 byte for attribute_vector
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{5});
 
   value_segment_int->append(2);
   dict_segment = std::make_shared<DictionarySegment<int32_t>>(value_segment_int);
-  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{10}); // 8 byte for 2 * int32_t in dictionary + 2 byte for attribute_vector
+  // 8 bytes for 2 * int32_t in dictionary + 2 byte for attribute_vector
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{10});
 
   value_segment_int->append(2);
   dict_segment = std::make_shared<DictionarySegment<int32_t>>(value_segment_int);
-  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{11}); // 8 byte for 2 * int32_t in dictionary + 3 byte for attribute_vector
+  // 8 byte for 2 * int32_t in dictionary + 3 byte for attribute_vector
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{11});
 }
 
 }  // namespace opossum

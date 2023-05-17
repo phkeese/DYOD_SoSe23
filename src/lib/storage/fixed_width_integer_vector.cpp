@@ -1,4 +1,5 @@
 #include "fixed_width_integer_vector.hpp"
+#include <memory>
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -43,7 +44,7 @@ std::shared_ptr<AbstractAttributeVector> compress_attribute_vector(const std::ve
     return std::make_shared<FixedWidthIntegerVector<uint8_t>>();
   }
   // +1 due to null value
-  const auto total_number_of_values = *max_element + 1;
+  const auto total_number_of_values = static_cast<size_t>(*max_element) + 1;
   auto compressed_attribute_list = std::shared_ptr<AbstractAttributeVector>();
 
   if (total_number_of_values <= std::numeric_limits<uint8_t>::max()) {

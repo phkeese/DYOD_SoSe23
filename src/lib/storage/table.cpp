@@ -15,6 +15,8 @@ Table::Table(const ChunkOffset target_chunk_size) : _max_chunk_size{target_chunk
 
 void Table::add_column_definition(const std::string& name, const std::string& type, const bool nullable) {
   Assert(row_count() == 0, "Table already has values.");
+  Assert(std::find(_column_names.begin(), _column_names.end(), name) == _column_names.end(),
+         "Cannot add column with name '" + name + "' already present in table.");
   _column_names.push_back(name);
   _column_types.push_back(type);
   _column_nullable.push_back(nullable);
@@ -117,7 +119,6 @@ void Table::compress_chunk(const ChunkID chunk_id) {
   if (std::dynamic_pointer_cast<ValueSegment<Type>>(Segment)) { \
     return std::make_shared<DictionarySegment<Type>>(Segment);  \
   }
-
     // Explicitly try to convert for each data type using macros for better readability
     TRY_COMPRESS_TYPE(int32_t, segment);
     TRY_COMPRESS_TYPE(int64_t, segment);

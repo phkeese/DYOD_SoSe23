@@ -9,20 +9,19 @@ namespace opossum {
 namespace {
 // Add a value to a given abstract segment.
 void append_to_segment(const AllTypeVariant& value, const std::shared_ptr<AbstractSegment>& segment) {
-  // Test all possible ValueSegment variants.
-  if (const auto concrete_i32 = std::dynamic_pointer_cast<ValueSegment<int32_t>>(segment)) {
-    concrete_i32->append(value);
-  } else if (const auto concrete_i64 = std::dynamic_pointer_cast<ValueSegment<int64_t>>(segment)) {
-    concrete_i64->append(value);
-  } else if (const auto concrete_float = std::dynamic_pointer_cast<ValueSegment<float>>(segment)) {
-    concrete_float->append(value);
-  } else if (const auto concrete_double = std::dynamic_pointer_cast<ValueSegment<double>>(segment)) {
-    concrete_double->append(value);
-  } else if (const auto concrete_string = std::dynamic_pointer_cast<ValueSegment<std::string>>(segment)) {
-    concrete_string->append(value);
-  } else {
-    Fail("Datatype not implemented.");
+// Test all possible ValueSegment variants.
+#define TRY_APPEND_TYPE(Type)                                                         \
+  if (const auto concrete = std::dynamic_pointer_cast<ValueSegment<Type>>(segment)) { \
+    concrete->append(value);                                                          \
+    return;                                                                           \
   }
+  TRY_APPEND_TYPE(int32_t)
+  TRY_APPEND_TYPE(int64_t)
+  TRY_APPEND_TYPE(float)
+  TRY_APPEND_TYPE(double)
+  TRY_APPEND_TYPE(std::string)
+#undef TRY_APPEND_TYPE
+  Fail("Datatype not implemented.");
 }
 }  // namespace
 

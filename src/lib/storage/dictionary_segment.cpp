@@ -14,8 +14,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<AbstractSegment>& 
 }
 
 template <typename T>
-void DictionarySegment<T>::_compress(
-    const std::shared_ptr<AbstractSegment>& abstract_segment) {
+void DictionarySegment<T>::_compress(const std::shared_ptr<AbstractSegment>& abstract_segment) {
   _create_dictionary(abstract_segment);
   _create_attribute_vector(abstract_segment);
 }
@@ -43,8 +42,7 @@ void DictionarySegment<T>::_create_dictionary(const std::shared_ptr<AbstractSegm
 }
 
 template <typename T>
-void DictionarySegment<T>::_create_attribute_vector(
-    const std::shared_ptr<AbstractSegment>& abstract_segment) {
+void DictionarySegment<T>::_create_attribute_vector(const std::shared_ptr<AbstractSegment>& abstract_segment) {
   auto attribute_list = std::vector<ValueID>();
   const auto size = abstract_segment->size();
   attribute_list.reserve(size);

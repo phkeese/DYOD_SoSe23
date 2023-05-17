@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include "abstract_attribute_vector.hpp"
 
 namespace opossum {
