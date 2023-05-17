@@ -129,5 +129,15 @@ TEST_F(StorageTableTest, DYODWeek4Second) {
   EXPECT_EQ(table.chunk_count(), 2);
 }
 
+TEST_F(StorageTableTest, AppendWithEncodedSegments) {
+  table.append({1, "foo"});
+  EXPECT_EQ(table.row_count(), 1);
+
+  table.compress_chunk(ChunkID{0});
+  table.append({2, "bar"});
+
+  EXPECT_EQ(table.row_count(), 2);
+  EXPECT_EQ(table.chunk_count(), 2);
+}
 
 }  // namespace opossum
