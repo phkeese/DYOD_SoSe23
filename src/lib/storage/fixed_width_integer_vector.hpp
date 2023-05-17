@@ -11,11 +11,11 @@ class FixedWidthIntegerVector : public AbstractAttributeVector {
   FixedWidthIntegerVector() = default;
   explicit FixedWidthIntegerVector(size_t size);
   explicit FixedWidthIntegerVector(const std::vector<ValueID>& values);
-  virtual ~FixedWidthIntegerVector() = default;
+  ~FixedWidthIntegerVector() override = default;
 
   // We need to explicitly set the move constructor to default when we overwrite the copy constructor.
-  FixedWidthIntegerVector(FixedWidthIntegerVector&&) = default;
-  FixedWidthIntegerVector& operator=(FixedWidthIntegerVector&&) = default;
+  FixedWidthIntegerVector(FixedWidthIntegerVector&&) noexcept = default;
+  FixedWidthIntegerVector& operator=(FixedWidthIntegerVector&&) noexcept = default;
 
   // Returns the value id at a given position.
   ValueID get(const size_t index) const override;

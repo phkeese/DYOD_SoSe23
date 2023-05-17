@@ -114,7 +114,7 @@ void Table::compress_chunk(const ChunkID chunk_id) {
   // Typedef to limit word vomit
   using abstract_ptr = std::shared_ptr<AbstractSegment>;
 
-  auto compress_segment = [](abstract_ptr segment) -> abstract_ptr {
+  const auto compress_segment = [](const abstract_ptr& segment) -> abstract_ptr {
 #define TRY_COMPRESS_TYPE(Type, Segment)                        \
   if (std::dynamic_pointer_cast<ValueSegment<Type>>(Segment)) { \
     return std::make_shared<DictionarySegment<Type>>(Segment);  \
@@ -135,13 +135,13 @@ void Table::compress_chunk(const ChunkID chunk_id) {
   create_new_chunk();
 
   // Keep currently compressing chunk for reading.
-  auto chunk = get_chunk(chunk_id);
-  auto segment_count = chunk->column_count();
+  const auto chunk = get_chunk(chunk_id);
+  const auto segment_count = chunk->column_count();
   auto futures = std::vector<std::future<abstract_ptr>>{};
   futures.reserve(segment_count);
 
   for (auto index = ColumnID{0}; index < segment_count; ++index) {
-    auto segment = chunk->get_segment(index);
+    const auto segment = chunk->get_segment(index);
     auto task = std::packaged_task<abstract_ptr(abstract_ptr)>(compress_segment);
     auto future = task.get_future();
     auto thread = std::thread(std::move(task), segment);
@@ -155,7 +155,7 @@ void Table::compress_chunk(const ChunkID chunk_id) {
   auto compressed_chunk = std::make_shared<Chunk>();
   for (auto& future : futures) {
     future.wait();
-    auto compressed_segment = future.get();
+    const auto compressed_segment = future.get();
     compressed_chunk->add_segment(compressed_segment);
   }
 
