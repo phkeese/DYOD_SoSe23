@@ -63,29 +63,8 @@ void DictionarySegment<T>::_create_attribute_vector(
     const auto dictionary_index = std::distance(_dictionary.begin(), it) + 1;
     attribute_list.push_back(ValueID(dictionary_index));
   }
-  _compress_attribute_vector(attribute_list);
+  _attribute_vector = compress_attribute_vector(attribute_list);
 }
-
-template <typename T>
-void DictionarySegment<T>::_compress_attribute_vector(
-    const std::vector<ValueID>& attribute_list) {
-  // +1 due to null value
-  const auto total_number_of_values = _dictionary.size() + 1;
-  auto compressed_attribute_list = std::shared_ptr<AbstractAttributeVector>();
-
-  if (total_number_of_values <= std::numeric_limits<uint8_t>::max()) {
-    compressed_attribute_list = std::make_shared<FixedWidthIntegerVector<uint8_t>>(attribute_list);
-  } else if (total_number_of_values <= std::numeric_limits<uint16_t>::max()) {
-    compressed_attribute_list = std::make_shared<FixedWidthIntegerVector<uint16_t>>(attribute_list);
-  } else if (total_number_of_values <= std::numeric_limits<uint32_t>::max()) {
-    compressed_attribute_list = std::make_shared<FixedWidthIntegerVector<uint32_t>>(attribute_list);
-  } else {
-    Fail("Too many unique values in dictionary segment (" + std::to_string(total_number_of_values) +
-         " unique values).");
-  }
-  _attribute_vector = compressed_attribute_list;
-}
-
 
 template <typename T>
 AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {

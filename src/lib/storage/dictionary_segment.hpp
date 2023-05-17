@@ -61,7 +61,6 @@ class DictionarySegment : public AbstractSegment {
 
  protected:
   void _compress(const std::shared_ptr<AbstractSegment>& abstract_segment);
-  void _compress_attribute_vector(const std::vector<ValueID>& attribute_list);
   void _create_dictionary(const std::shared_ptr<AbstractSegment>& abstract_segment);
   void _create_attribute_vector(const std::shared_ptr<AbstractSegment>& abstract_segment);
   std::vector<T> _dictionary;

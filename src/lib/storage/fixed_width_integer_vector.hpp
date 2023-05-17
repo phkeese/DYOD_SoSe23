@@ -33,6 +33,7 @@ class FixedWidthIntegerVector : public AbstractAttributeVector {
   std::vector<T> _value_ids;
 };
 
+std::shared_ptr<AbstractAttributeVector> compress_attribute_vector(const std::vector<ValueID>& attribute_list);
 // Explicitly instantiate types
 extern template class FixedWidthIntegerVector<uint32_t>;
 extern template class FixedWidthIntegerVector<uint16_t>;
