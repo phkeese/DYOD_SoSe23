@@ -42,11 +42,11 @@ set(
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure opossumTest
-add_executable(opossumTest ${OPOSSUM_TEST_SOURCES})
+add_executable(opossumTest ${OPOSSUM_TEST_SOURCES} storage/fixed_width_integer_vector_test.cpp)
 target_link_libraries(opossumTest opossum ${LIBRARIES})
 
 # Configure opossumCoverageApp
-add_executable(opossumCoverage EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
+add_executable(opossumCoverage EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES} storage/fixed_width_integer_vector_test.cpp)
 target_link_libraries(opossumCoverage opossumCoverageLib ${LIBRARIES} --coverage)
 set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
 

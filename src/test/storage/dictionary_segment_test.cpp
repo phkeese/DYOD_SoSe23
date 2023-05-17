@@ -1,3 +1,4 @@
+#include <numeric>
 #include "base_test.hpp"
 
 #include "resolve_type.hpp"
@@ -153,6 +154,40 @@ TEST_F(StorageDictionarySegmentTest, OutOfBoundsChecking) {
   EXPECT_THROW(dict_segment->operator[](1), std::logic_error);
   EXPECT_THROW(dict_segment->get_typed_value(1), std::logic_error);
   EXPECT_THROW(dict_segment->get(1), std::logic_error);
+}
+
+TEST_F(StorageDictionarySegmentTest, MemoryUsage) {
+  value_segment_int->append(1);
+
+  auto dict_segment = std::make_shared<DictionarySegment<int32_t>>(value_segment_int);
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{5}); // 4 byte for 1 * int32_t in dictionary + 1 byte for attribute_vector
+
+  value_segment_int->append(2);
+  dict_segment = std::make_shared<DictionarySegment<int32_t>>(value_segment_int);
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{10}); // 8 byte for 2 * int32_t in dictionary + 2 byte for attribute_vector
+
+  value_segment_int->append(2);
+  dict_segment = std::make_shared<DictionarySegment<int32_t>>(value_segment_int);
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{11}); // 8 byte for 2 * int32_t in dictionary + 3 byte for attribute_vector
+}
+
+TEST_F(StorageDictionarySegmentTest, UsesCorrectAttributeIDWidth) {
+  const auto test_width = [this]<typename T>() {
+//    auto values = std::vector<int32_t>(std::numeric_limits<T>::max() - 1); // -1 to allow space for null_value_id
+//    std::iota(values.begin(), values.end(), 0);
+//    for (const auto value : values) {
+//      value_segment_int->append(value);
+//    }
+//    const auto dict_segment = std::make_shared<DictionarySegment<int32_t>>(value_segment_int);
+//    EXPECT_EQ(dict_segment->attribute_vector()->width(), AttributeVectorWidth{sizeof(T)});
+  };
+  // 255 distinct values -> uint8_t
+  test_width.operator()<uint8_t>();
+  // 65535 distinct values -> uin16_t
+  test_width.operator()<uint16_t>();
+  // 4294967295 distinct values -> uint32_t
+//  test_width.operator()<uint32_t>();
+  // fails for more
 }
 
 }  // namespace opossum
