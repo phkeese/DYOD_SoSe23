@@ -1,5 +1,6 @@
 #include "fixed_width_integer_vector.hpp"
 #include <memory>
+#include <bit>
 #include "utils/assert.hpp"
 
 namespace opossum {
