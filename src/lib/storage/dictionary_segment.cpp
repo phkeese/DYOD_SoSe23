@@ -55,11 +55,9 @@ void DictionarySegment<T>::_create_attribute_vector(const std::shared_ptr<Abstra
       continue;
     }
     const auto typed_value = type_cast<T>(variant);
-    const auto it = std::find(_dictionary.begin(), _dictionary.end(), typed_value);
-    DebugAssert(it != _dictionary.end(), "Inserted value not in the set of unique values.");
-    // + 1 to account for null_value_id().
-    const auto dictionary_index = std::distance(_dictionary.begin(), it) + 1;
-    attribute_list.push_back(ValueID(dictionary_index));
+    const auto value_id = lower_bound(typed_value);
+    DebugAssert(value_id != INVALID_VALUE_ID, "Inserted value not in the set of unique values.");
+    attribute_list.push_back(value_id);
   }
   _attribute_vector = compress_attribute_vector(attribute_list);
 }
@@ -101,16 +99,13 @@ std::shared_ptr<const AbstractAttributeVector> DictionarySegment<T>::attribute_v
 
 template <typename T>
 ValueID DictionarySegment<T>::null_value_id() const {
-  return ValueID{0};
+  return ValueID(_dictionary.size());
 }
 
 template <typename T>
-const T DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
-  DebugAssert(value_id != null_value_id(), "ValueID " + std::to_string(value_id) + " is reserved for NULL values.");
-  // null_value_id is 0, so every other index is off by one.
-  const auto value_id_without_null = ValueID{value_id - 1};
-  DebugAssert(value_id_without_null < _dictionary.size(), "ValueID " + std::to_string(value_id) + " is out of range.");
-  return _dictionary[value_id_without_null];
+const T DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {;
+  DebugAssert(value_id < _dictionary.size(), "ValueID " + std::to_string(value_id) + " is out of range.");
+  return _dictionary[value_id];
 }
 
 template <typename T>
