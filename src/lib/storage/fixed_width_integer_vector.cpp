@@ -11,6 +11,9 @@ template <typename T>
 FixedWidthIntegerVector<T>::FixedWidthIntegerVector(const std::vector<ValueID>& values) {
   _value_ids.reserve(values.size());
   for (const auto value : values) {
+    Assert(value <= std::numeric_limits<T>::max(),
+           "ValueID " + std::to_string(value) + " is too large for FixedWidthIntegerVector with width " +
+           std::to_string(std::bit_width(std::numeric_limits<T>::max())));
     const auto as_t = T(value);
     _value_ids.push_back(as_t);
   }
@@ -38,26 +41,27 @@ ValueID FixedWidthIntegerVector<T>::get(const size_t index) const {
   return ValueID{_value_ids[index]};
 }
 
-std::shared_ptr<AbstractAttributeVector> compress_attribute_vector(const std::vector<ValueID>& attribute_list) {
-  const auto max_element = std::max_element(attribute_list.begin(), attribute_list.end());
-  if (max_element == attribute_list.end()) {
+std::shared_ptr<AbstractAttributeVector> compress_attribute_vector(const std::vector<ValueID>& value_ids) {
+  if (value_ids.empty()) {
     return std::make_shared<FixedWidthIntegerVector<uint8_t>>();
   }
-  // +1 due to null value
-  const auto total_number_of_values = static_cast<size_t>(*max_element) + 1;
-  auto compressed_attribute_list = std::shared_ptr<AbstractAttributeVector>();
 
-  if (total_number_of_values <= std::numeric_limits<uint8_t>::max()) {
-    compressed_attribute_list = std::make_shared<FixedWidthIntegerVector<uint8_t>>(attribute_list);
-  } else if (total_number_of_values <= std::numeric_limits<uint16_t>::max()) {
-    compressed_attribute_list = std::make_shared<FixedWidthIntegerVector<uint16_t>>(attribute_list);
-  } else if (total_number_of_values <= std::numeric_limits<uint32_t>::max()) {
-    compressed_attribute_list = std::make_shared<FixedWidthIntegerVector<uint32_t>>(attribute_list);
+  const auto max_element = *std::max_element(value_ids.begin(), value_ids.end());
+  Assert(max_element < INVALID_VALUE_ID, "Maximum ValueID is too large.");
+
+  auto compressed_value_ids = std::shared_ptr<AbstractAttributeVector>();
+
+  if (max_element <= std::numeric_limits<uint8_t>::max()) {
+    compressed_value_ids = std::make_shared<FixedWidthIntegerVector<uint8_t>>(value_ids);
+  } else if (max_element <= std::numeric_limits<uint16_t>::max()) {
+    compressed_value_ids = std::make_shared<FixedWidthIntegerVector<uint16_t>>(value_ids);
+  } else if (max_element <= std::numeric_limits<uint32_t>::max()) {
+    compressed_value_ids = std::make_shared<FixedWidthIntegerVector<uint32_t>>(value_ids);
   } else {
-    Fail("Too many unique values in dictionary segment (" + std::to_string(total_number_of_values) +
+    Fail("Too many unique values in dictionary segment (" + std::to_string(max_element) +
          " unique values).");
   }
-  return compressed_attribute_list;
+  return compressed_value_ids;
 }
 
 template class FixedWidthIntegerVector<uint32_t>;

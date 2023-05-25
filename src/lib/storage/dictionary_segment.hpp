@@ -6,7 +6,7 @@ namespace opossum {
 
 class AbstractAttributeVector;
 
-// Dictionary is a specific segment type that stores all its values in a vector
+// Dictionary is a specific segment type that stores all its values in a vector.
 template <typename T>
 class DictionarySegment : public AbstractSegment {
  public:

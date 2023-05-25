@@ -13,10 +13,6 @@ class FixedWidthIntegerVector : public AbstractAttributeVector {
   explicit FixedWidthIntegerVector(const std::vector<ValueID>& values);
   ~FixedWidthIntegerVector() override = default;
 
-  // We need to explicitly set the move constructor to default when we overwrite the copy constructor.
-  FixedWidthIntegerVector(FixedWidthIntegerVector&&) noexcept = default;
-  FixedWidthIntegerVector& operator=(FixedWidthIntegerVector&&) noexcept = default;
-
   // Returns the value id at a given position.
   ValueID get(const size_t index) const override;
 
@@ -34,7 +30,7 @@ class FixedWidthIntegerVector : public AbstractAttributeVector {
   std::vector<T> _value_ids;
 };
 
-std::shared_ptr<AbstractAttributeVector> compress_attribute_vector(const std::vector<ValueID>& attribute_list);
+std::shared_ptr<AbstractAttributeVector> compress_attribute_vector(const std::vector<ValueID>& value_ids);
 // Explicitly instantiate types
 extern template class FixedWidthIntegerVector<uint32_t>;
 extern template class FixedWidthIntegerVector<uint16_t>;
