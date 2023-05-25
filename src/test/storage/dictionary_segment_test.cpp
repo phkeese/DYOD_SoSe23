@@ -1,3 +1,4 @@
+#include <numeric>
 #include "base_test.hpp"
 
 #include "resolve_type.hpp"
@@ -68,6 +69,76 @@ TEST_F(StorageDictionarySegmentTest, LowerUpperBound) {
   EXPECT_EQ(dict_segment->upper_bound(15), INVALID_VALUE_ID);
 }
 
-// TODO(student): You should add some more tests here (full coverage would be appreciated) and possibly in other files.
+TEST_F(StorageDictionarySegmentTest, CompressEmptySegment) {
+  const auto dict_segment = std::make_shared<DictionarySegment<std::string>>(value_segment_str);
+  EXPECT_EQ(dict_segment->size(), 0);
+  EXPECT_EQ(dict_segment->unique_values_count(), 0);
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), 0);
+}
+
+TEST_F(StorageDictionarySegmentTest, OperatorBracketsAccess) {
+  value_segment_str->append("This");
+  value_segment_str->append("is");
+  value_segment_str->append("just");
+  value_segment_str->append("a");
+  value_segment_str->append("test");
+  value_segment_str->append("!");
+  value_segment_str->append(NULL_VALUE);
+
+  const auto dict_segment = std::make_shared<DictionarySegment<std::string>>(value_segment_str);
+  EXPECT_EQ(dict_segment->operator[](0), AllTypeVariant{"This"});
+  EXPECT_EQ(dict_segment->operator[](1), AllTypeVariant{"is"});
+  EXPECT_EQ(dict_segment->operator[](2), AllTypeVariant{"just"});
+  EXPECT_EQ(dict_segment->operator[](3), AllTypeVariant{"a"});
+  EXPECT_EQ(dict_segment->operator[](4), AllTypeVariant{"test"});
+  EXPECT_EQ(dict_segment->operator[](5), AllTypeVariant{"!"});
+  EXPECT_TRUE(variant_is_null(dict_segment->operator[](6)));
+}
+
+TEST_F(StorageDictionarySegmentTest, GetAccess) {
+  value_segment_str->append("This");
+  value_segment_str->append("is");
+  value_segment_str->append("just");
+  value_segment_str->append("a");
+  value_segment_str->append("test");
+  value_segment_str->append("!");
+  value_segment_str->append(NULL_VALUE);
+
+  const auto dict_segment = std::make_shared<DictionarySegment<std::string>>(value_segment_str);
+  EXPECT_EQ(dict_segment->get(0), "This");
+  EXPECT_EQ(dict_segment->get(1), "is");
+  EXPECT_EQ(dict_segment->get(2), "just");
+  EXPECT_EQ(dict_segment->get(3), "a");
+  EXPECT_EQ(dict_segment->get(4), "test");
+  EXPECT_EQ(dict_segment->get(5), "!");
+  EXPECT_THROW(dict_segment->get(6), std::logic_error);
+}
+
+TEST_F(StorageDictionarySegmentTest, OutOfBoundsChecking) {
+  value_segment_str->append("Hello World!");
+
+  const auto dict_segment = std::make_shared<DictionarySegment<std::string>>(value_segment_str);
+  EXPECT_THROW(dict_segment->operator[](1), std::logic_error);
+  EXPECT_THROW(dict_segment->get_typed_value(1), std::logic_error);
+  EXPECT_THROW(dict_segment->get(1), std::logic_error);
+}
+
+TEST_F(StorageDictionarySegmentTest, MemoryUsage) {
+  value_segment_int->append(1);
+
+  auto dict_segment = std::make_shared<DictionarySegment<int32_t>>(value_segment_int);
+  // 4 bytes for 1 * int32_t in dictionary + 1 byte for attribute_vector
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{5});
+
+  value_segment_int->append(2);
+  dict_segment = std::make_shared<DictionarySegment<int32_t>>(value_segment_int);
+  // 8 bytes for 2 * int32_t in dictionary + 2 byte for attribute_vector
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{10});
+
+  value_segment_int->append(2);
+  dict_segment = std::make_shared<DictionarySegment<int32_t>>(value_segment_int);
+  // 8 byte for 2 * int32_t in dictionary + 3 byte for attribute_vector
+  EXPECT_EQ(dict_segment->estimate_memory_usage(), size_t{11});
+}
 
 }  // namespace opossum

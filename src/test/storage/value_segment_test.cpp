@@ -82,4 +82,9 @@ TEST_F(StorageValueSegmentTest, NullValueHandling) {
   EXPECT_THROW(string_value_segment.null_values(), std::logic_error);
 }
 
+TEST_F(StorageValueSegmentTest, GetTypedFromNonNullable) {
+  string_value_segment.append("Test");
+  EXPECT_EQ(string_value_segment.get_typed_value(ChunkOffset{0}), "Test");
+}
+
 }  // namespace opossum

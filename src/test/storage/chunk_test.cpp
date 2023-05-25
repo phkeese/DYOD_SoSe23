@@ -3,6 +3,7 @@
 #include "resolve_type.hpp"
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
+#include "storage/dictionary_segment.hpp"
 
 namespace opossum {
 
@@ -115,6 +116,12 @@ TEST_F(StorageChunkTest, AddAllDataTypes) {
 TEST_F(StorageChunkTest, AddSegmentTwice) {
   chunk.add_segment(int_value_segment);
   EXPECT_THROW(chunk.add_segment(int_value_segment), std::logic_error);
+}
+
+TEST_F(StorageChunkTest, AppendToNonValueSegment) {
+  const auto dict_segment = std::make_shared<DictionarySegment<int32_t>>(int_value_segment);
+  chunk.add_segment(dict_segment);
+  EXPECT_THROW(chunk.append({0}), std::logic_error);
 }
 
 }  // namespace opossum

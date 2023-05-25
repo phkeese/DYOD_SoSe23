@@ -130,14 +130,32 @@ TEST_F(StorageTableTest, DYODWeek4Second) {
 }
 
 TEST_F(StorageTableTest, AppendWithEncodedSegments) {
+  table.add_column("col_3", "float", false);
+  table.add_column("col_4", "double", false);
+  table.append({1, "foo", 3.1415f, 4.1});
+  EXPECT_EQ(table.row_count(), 1);
+
+  table.compress_chunk(ChunkID{0});
+  table.append({2, "bar", 1.0f, 1.0});
+
+  EXPECT_EQ(table.row_count(), 2);
+  EXPECT_EQ(table.chunk_count(), 2);
+}
+
+TEST_F(StorageTableTest, CompressChunkTwice) {
   table.append({1, "foo"});
   EXPECT_EQ(table.row_count(), 1);
 
   table.compress_chunk(ChunkID{0});
-  table.append({2, "bar"});
+  EXPECT_THROW(table.compress_chunk(ChunkID{0}), std::logic_error);
+}
 
-  EXPECT_EQ(table.row_count(), 2);
-  EXPECT_EQ(table.chunk_count(), 2);
+TEST_F(StorageTableTest, EqualColumnNames) {
+  EXPECT_THROW(table.add_column_definition("col_1", "int", true), std::logic_error);
+}
+
+TEST_F(StorageTableTest, CompressInvalidId) {
+  EXPECT_THROW(table.compress_chunk(ChunkID{1}), std::logic_error);
 }
 
 }  // namespace opossum
