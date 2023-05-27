@@ -33,6 +33,13 @@ template<typename T>
 std::shared_ptr<const Table> scan(const T search_value, const ScanType scan_type, const ColumnID search_column_id, const std::shared_ptr<const Table>& table) {
   auto result_table = std::make_shared<Table>();
   auto pos_list = std::make_shared<PosList>();
+  const auto initial_result_chunk = result_table->get_chunk(ChunkID{0});
+  const auto column_count = table->column_count();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    result_table->add_column_definition(table->column_name(column_id), table->column_type(column_id), table->column_nullable(column_id));
+    const auto reference_segment = std::make_shared<ReferenceSegment>(table, column_id, pos_list);
+    initial_result_chunk->add_segment(reference_segment);
+  }
   const auto selector = Selector<T>{scan_type, search_value};
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -43,16 +50,11 @@ std::shared_ptr<const Table> scan(const T search_value, const ScanType scan_type
       pos_list->insert(pos_list->end(), chunk_pos_list.begin(), chunk_pos_list.end());
     } else if (const auto dictionary_segment = std::dynamic_pointer_cast<const DictionarySegment<T>>(segment)) {
       std::cout << "Found a DictionarySegment" << std::endl;
+    } else if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
+        std::cout << "Found a ReferenceSegment" << std::endl;
     } else {
       Fail("Could not match any known segment type.");
     }
-  }
-  const auto initial_result_chunk = result_table->get_chunk(ChunkID{0});
-  const auto column_count = table->column_count();
-  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    result_table->add_column_definition(table->column_name(column_id), table->column_type(column_id), table->column_nullable(column_id));
-    const auto reference_segment = std::make_shared<ReferenceSegment>(table, column_id, pos_list);
-    initial_result_chunk->add_segment(reference_segment);
   }
   return result_table;
 }
