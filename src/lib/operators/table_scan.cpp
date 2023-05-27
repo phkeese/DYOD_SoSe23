@@ -12,17 +12,42 @@ namespace opossum {
 namespace {
 
 template<typename T>
-PosList scan_in_value_segment(const Selector<T>& selector, const ChunkID chunk_id, const std::shared_ptr<const ValueSegment<T>>& segment) {
-  auto pos_list = PosList();
+void scan_in_value_segment(const Selector<T>& selector, const ChunkID chunk_id, const std::shared_ptr<const ValueSegment<T>>& segment, const std::shared_ptr<PosList>& pos_list) {
   const auto& values = segment->values();
   const auto values_count = values.size();
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_count; ++chunk_offset) {
     const auto value = values[chunk_offset];
     if (selector.selects(value)) {
-      pos_list.emplace_back(chunk_id, chunk_offset);
+      pos_list->emplace_back(chunk_id, chunk_offset);
     }
   }
-  return pos_list;
+}
+
+template<typename T>
+void scan_in_dictionary_segment(const Selector<T>& selector, const ChunkID chunk_id, const std::shared_ptr<const DictionarySegment<T>>& segment, const std::shared_ptr<PosList>& pos_list) {
+  const auto values_count = segment->size();
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_count; ++chunk_offset) {
+    const auto value = segment->get(chunk_offset);
+    if (selector.selects(value)) {
+      pos_list->emplace_back(chunk_id, chunk_offset);
+    }
+  }
+}
+
+template<typename T>
+void scan_in_reference_segment(const Selector<T>& selector, const ChunkID chunk_id, const std::shared_ptr<const ReferenceSegment>& segment, const std::shared_ptr<PosList>& pos_list) {
+  const auto values_count = segment->size();
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_count; ++chunk_offset) {
+    // TODO: We are not supposed to do that.
+    const auto all_type_variant = segment->operator[](chunk_offset);
+    if (variant_is_null(all_type_variant)) {
+      continue;
+    }
+    const auto value = type_cast<T>(all_type_variant);
+    if (selector.selects(value)) {
+      pos_list->emplace_back(chunk_id, chunk_offset);
+    }
+  }
 }
 
 /*
@@ -46,12 +71,11 @@ std::shared_ptr<const Table> scan(const T search_value, const ScanType scan_type
     const auto chunk = table->get_chunk(chunk_id);
     const auto segment = chunk->get_segment(search_column_id);
     if (const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<T>>(segment)) {
-      const auto chunk_pos_list = scan_in_value_segment(selector, chunk_id, value_segment);
-      pos_list->insert(pos_list->end(), chunk_pos_list.begin(), chunk_pos_list.end());
+      scan_in_value_segment(selector, chunk_id, value_segment, pos_list);
     } else if (const auto dictionary_segment = std::dynamic_pointer_cast<const DictionarySegment<T>>(segment)) {
-      std::cout << "Found a DictionarySegment" << std::endl;
+      scan_in_dictionary_segment(selector, chunk_id, dictionary_segment, pos_list);
     } else if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
-        std::cout << "Found a ReferenceSegment" << std::endl;
+      scan_in_reference_segment(selector, chunk_id, reference_segment, pos_list);
     } else {
       Fail("Could not match any known segment type.");
     }
