@@ -42,6 +42,9 @@ struct Selector {
         return other < _search_value;
       case ScanType::OpLessThanEquals:
         return other <= _search_value;
+      default:
+        // TODO: Better error, with value
+        Fail("Unknown ScanType");
     }
   }
 
