@@ -283,4 +283,19 @@ TEST_F(OperatorsTableScanTest, ScanOnReferenceSegmentWithNullValue) {
   }
 }
 
+TEST_F(OperatorsTableScanTest, DisallowRecursiveReferences) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+
+  auto positions = std::make_shared<PosList>();
+  positions->emplace_back(RowID{ChunkID{0}, 0});
+  auto first_reference = std::make_shared<ReferenceSegment>(table, ColumnID{0}, positions);
+
+  auto second_table = std::make_shared<Table>();
+  second_table->add_column_definition("ref", "int", false);
+  second_table->get_chunk(ChunkID{0})->add_segment(first_reference);
+
+  auto second_reference = std::make_shared<ReferenceSegment>(second_table, ColumnID{0}, positions);
+  ASSERT_THROW(second_reference->operator[](0), std::logic_error);
+}
+
 }  // namespace opossum
