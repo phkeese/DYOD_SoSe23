@@ -44,7 +44,7 @@ struct Selector {
         return other <= _search_value;
       default:
         // TODO: Better error, with value
-        Fail("Unknown ScanType");
+        Fail("Could not match any possible ScanType. ScanType with name " + typeid(_search_value).name() + " is not supported.");
     }
   }
 
