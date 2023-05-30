@@ -4,6 +4,7 @@
 #include "fixed_width_integer_vector.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
+#include "abstract_attribute_vector.hpp"
 
 namespace opossum {
 
@@ -110,7 +111,7 @@ const T DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {;
 template <typename T>
 ValueID DictionarySegment<T>::lower_bound(const T value) const {
   const auto it = std::lower_bound(dictionary().begin(), dictionary().end(), value);
-  if (it == dictionary().end()) {
+  if (it == dictionary().end() || *it > value) {
     return INVALID_VALUE_ID;
   }
   return ValueID(std::distance(dictionary().begin(), it));

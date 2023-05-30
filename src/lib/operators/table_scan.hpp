@@ -48,6 +48,14 @@ struct Selector {
     }
   }
 
+  T search_value() const {
+    return _search_value;
+  }
+
+  ScanType scan_type() const {
+    return _scan_type;
+  }
+
  private:
   ScanType _scan_type;
   T _search_value;

@@ -17,6 +17,9 @@ void scan_in_value_segment(const Selector<T>& selector, const ChunkID chunk_id, 
   const auto values_count = segment_values.size();
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_count; ++chunk_offset) {
+    if (segment->is_null(chunk_offset)) {
+      continue;
+    }
     const auto value = segment_values[chunk_offset];
     if (selector.selects(value)) {
       pos_list->emplace_back(RowID{chunk_id, chunk_offset});
@@ -26,10 +29,19 @@ void scan_in_value_segment(const Selector<T>& selector, const ChunkID chunk_id, 
 
 template<typename T>
 void scan_in_dictionary_segment(const Selector<T>& selector, const ChunkID chunk_id, const std::shared_ptr<const DictionarySegment<T>>& segment, const std::shared_ptr<PosList>& pos_list) {
+  const auto value_ids = segment->attribute_vector();
+  const auto search_value = selector.search_value();
+  const auto search_id = segment->lower_bound(search_value);
+  if (search_id == INVALID_VALUE_ID) {
+    return;
+  }
+
+  const auto value_id_selector = Selector<ValueID>(selector.scan_type(), search_id);
+
   const auto values_count = segment->size();
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_count; ++chunk_offset) {
-    const auto value = segment->get(chunk_offset);
-    if (selector.selects(value)) {
+    const auto value_id = value_ids->get(chunk_offset);
+    if (value_id_selector.selects(value_id)) {
       pos_list->emplace_back(RowID{chunk_id, chunk_offset});
     }
   }
@@ -94,6 +106,7 @@ std::shared_ptr<const Table> scan(const T search_value, const ScanType scan_type
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const ScanType scan_type,
           const AllTypeVariant search_value) : AbstractOperator(in), _column_id{column_id}, _scan_type{scan_type}, _search_value{search_value} {
+    DebugAssert(_left_input != nullptr, "TableScan operator requires a left input.");
     DebugAssert(_right_input == nullptr, "There should not be a right input for the table scan operator.");
 }
 

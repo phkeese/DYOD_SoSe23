@@ -1,10 +1,9 @@
 #pragma once
 
 #include "abstract_segment.hpp"
+#include "abstract_attribute_vector.hpp"
 
 namespace opossum {
-
-class AbstractAttributeVector;
 
 // Dictionary is a specific segment type that stores all its values in a vector.
 template <typename T>
