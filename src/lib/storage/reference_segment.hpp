@@ -25,10 +25,15 @@ class ReferenceSegment : public AbstractSegment {
 
   size_t estimate_memory_usage() const final;
 
+
  protected:
+  template<typename T>
+  std::optional<T> _get_typed_value(const ChunkOffset chunk_offset) const;
   const std::shared_ptr<const Table> _referenced_table;
   const ColumnID _referenced_column_id;
   const std::shared_ptr<const PosList> _pos;
+
+  friend class TableScan;
 };
 
 }  // namespace opossum

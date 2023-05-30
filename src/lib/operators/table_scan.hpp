@@ -28,16 +28,16 @@ class TableScan : public AbstractOperator {
   void _scan_table();
 
   template<typename T>
-  void _scan_abstract_segment(ChunkID chunk_id, std::shared_ptr<AbstractSegment> segment);
+  void _scan_abstract_segment(ChunkID chunk_id, const std::shared_ptr<AbstractSegment>& segment);
 
   template<typename T>
-  void _scan_value_segment(ChunkID chunk_id, std::shared_ptr<ValueSegment<T>> segment);
+  void _scan_value_segment(ChunkID chunk_id, const std::shared_ptr<ValueSegment<T>>& segment);
 
   template<typename T>
-  void _scan_dictionary_segment(ChunkID chunk_id, std::shared_ptr<DictionarySegment<T>>& segment);
+  void _scan_dictionary_segment(ChunkID chunk_id, const std::shared_ptr<DictionarySegment<T>>& segment);
 
   template<typename T>
-  void _scan_reference_segment(ChunkID chunk_id, std::shared_ptr<ReferenceSegment>& segment);
+  void _scan_reference_segment(ChunkID chunk_id, const std::shared_ptr<ReferenceSegment>& segment);
 
   ColumnID _column_id;
   ScanType _scan_type;
