@@ -39,8 +39,6 @@ class TableScan : public AbstractOperator {
   template<typename T>
   void _scan_reference_segment(ChunkID chunk_id, std::shared_ptr<ReferenceSegment>& segment);
 
-
-
   ColumnID _column_id;
   ScanType _scan_type;
   AllTypeVariant _search_value;
