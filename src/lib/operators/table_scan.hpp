@@ -3,6 +3,9 @@
 #include "../all_type_variant.hpp"
 #include "abstract_operator.hpp"
 #include "utils/assert.hpp"
+#include "../storage/value_segment.hpp"
+#include "../storage/dictionary_segment.hpp"
+#include "../storage/reference_segment.hpp"
 
 namespace opossum {
 
@@ -11,18 +14,38 @@ class TableScan : public AbstractOperator {
   TableScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const ScanType scan_type,
             const AllTypeVariant search_value);
 
-  ColumnID column_id() const;
+  inline ColumnID column_id() const { return _column_id; }
 
-  ScanType scan_type() const;
+  inline ScanType scan_type() const { return _scan_type; }
 
-  const AllTypeVariant& search_value() const;
+  inline const AllTypeVariant& search_value() const { return _search_value; }
 
  protected:
+  void _emit(ChunkID chunk_id, ChunkOffset offset);
+
   std::shared_ptr<const Table> _on_execute() override;
+  template<typename T>
+  void _scan_table();
+
+  template<typename T>
+  void _scan_abstract_segment(ChunkID chunk_id, std::shared_ptr<AbstractSegment> segment);
+
+  template<typename T>
+  void _scan_value_segment(ChunkID chunk_id, std::shared_ptr<ValueSegment<T>> segment);
+
+  template<typename T>
+  void _scan_dictionary_segment(std::shared_ptr<DictionarySegment<T>>& segment);
+
+  template<typename T>
+  void _scan_reference_segment(ChunkID chunk_id, std::shared_ptr<ReferenceSegment>& segment);
+
+
 
   ColumnID _column_id;
   ScanType _scan_type;
   AllTypeVariant _search_value;
+  std::shared_ptr<PosList> _pos_list;
+  std::shared_ptr<Table> _result_table;
 };
 
 template<typename T>
@@ -60,7 +83,5 @@ struct Selector {
   ScanType _scan_type;
   T _search_value;
 };
-
-
 
 }  // namespace opossum

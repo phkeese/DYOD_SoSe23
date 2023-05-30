@@ -28,20 +28,25 @@ void scan_in_value_segment(const Selector<T>& selector, const ChunkID chunk_id, 
 }
 
 template<typename T>
-void scan_in_dictionary_segment(const Selector<T>& selector, const ChunkID chunk_id, const std::shared_ptr<const DictionarySegment<T>>& segment, const std::shared_ptr<PosList>& pos_list) {
+void scan_in_dictionary_segment(
+    const Selector<T>& selector,
+    const ChunkID chunk_id,
+    const std::shared_ptr<const DictionarySegment<T>>& segment,
+    const std::shared_ptr<PosList>& pos_list) {
   const auto value_ids = segment->attribute_vector();
   const auto search_value = selector.search_value();
   const auto search_id = segment->lower_bound(search_value);
+
   if (search_id == INVALID_VALUE_ID) {
     return;
   }
 
-  const auto value_id_selector = Selector<ValueID>(selector.scan_type(), search_id);
-
   const auto values_count = segment->size();
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_count; ++chunk_offset) {
     const auto value_id = value_ids->get(chunk_offset);
-    if (value_id_selector.selects(value_id)) {
+    const auto value = segment->dictionary()[value_id];
+    (void) value;
+    if (selector.selects(value)) {
       pos_list->emplace_back(RowID{chunk_id, chunk_offset});
     }
   }
@@ -110,55 +115,95 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, const Co
     DebugAssert(_right_input == nullptr, "There should not be a right input for the table scan operator.");
 }
 
-ColumnID TableScan::column_id() const {
-  return _column_id;
-}
-
-ScanType TableScan::scan_type() const {
-  return _scan_type;
-}
-
-const AllTypeVariant& TableScan::search_value() const {
-  return _search_value;
-}
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
-  auto table = std::shared_ptr<const Table>(nullptr);
+   _result_table = std::make_shared<Table>();
+   _pos_list = std::make_shared<PosList>();
+  const auto initial_result_chunk = _result_table->get_chunk(ChunkID{0});
 
-  resolve_data_type(_left_input_table()->column_type(column_id()), [this, &table] (auto type) {
+
+  // Creates all columns of old table in the result table and Initializes the result chunks.
+  const auto input = _left_input_table();
+  const auto column_count = input->column_count();
+
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    _result_table->add_column_definition(input->column_name(column_id), input->column_type(column_id), input->column_nullable(column_id));
+    const auto reference_segment = std::make_shared<ReferenceSegment>(input, column_id, _pos_list);
+    initial_result_chunk->add_segment(reference_segment);
+  }
+
+  resolve_data_type(_left_input_table()->column_type(column_id()), [this] (auto type) {
     using Type = typename decltype(type)::type;
-    table = scan<Type>(
-        type_cast<Type>(search_value()),
-        scan_type(),
-        column_id(),
-        _left_input_table()
-    );
+    _scan_table<Type>();
   });
-
-//  const auto chunk_count = _left_input_table()->chunk_count();
-//  // const auto selector
-//  for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
-//    const auto chunk = table->get_chunk(chunk_index);
-//    const auto segment = chunk->get_segment(column_id());
-//    resolve_data_type(table->column_type(column_id()), [&] (auto type) {
-//      using Type = typename decltype(type)::type;
-//
-//      if (const auto typed_value_segment = std::dynamic_pointer_cast<const ValueSegment<Type>>(segment)) {
-//        const auto &values = typed_value_segment->values();
-//        const auto selector = Selector<Type>{scan_type(), type_cast<Type>(search_value())};
-//        for (const auto& value : values) {
-//          const auto matches = selector.selects(value);
-//        }
-//        return;
-//      }
-//      if (const auto typed_dictionary_segment = std::dynamic_pointer_cast<const DictionarySegment<Type>>(segment)) {
-//        // ...
-//        return;
-//      }
-//      Fail("Could not convert AbstractSegment to any type.");
-//    });
-//  }
-  return table;
+  return _result_table;
 }
+
+void TableScan::_emit(ChunkID chunk_id, ChunkOffset offset) {
+  _pos_list->emplace_back(RowID{chunk_id, offset});
+}
+
+
+template <typename Type>
+void TableScan::_scan_table() {
+  // Scan each segment
+  const auto chunk_count = _left_input_table()->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = _left_input_table()->get_chunk(chunk_id);
+    const auto segment = chunk->get_segment(column_id());
+    _scan_abstract_segment<Type>(chunk_id, segment);
+  }
+}
+
+template <typename T>
+void TableScan::_scan_abstract_segment(ChunkID chunk_id, std::shared_ptr<AbstractSegment> segment) {
+  if (auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment)) {
+    _scan_value_segment(chunk_id, value_segment);
+  } else if (auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
+    _scan_dictionary_segment(dictionary_segment);
+  } else if (auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
+    _scan_reference_segment<T>(chunk_id, reference_segment);
+  } else {
+    Fail("Segment type is not supported.");
+  }
+}
+
+template<typename T>
+void TableScan::_scan_value_segment(ChunkID chunk_id, std::shared_ptr<ValueSegment<T>> segment) {
+  const auto selector = Selector<T>(scan_type(), type_cast<T>(search_value()));
+  const auto segment_size = segment->size();
+  for (auto index = ChunkOffset{0}; index < segment_size; ++index) {
+    if (segment->is_null(index)) {
+      continue;
+    }
+    const auto value = segment->get(index);
+    if (selector.selects(value)) {
+      _emit(chunk_id, index);
+    }
+  }
+}
+
+template<typename T>
+void TableScan::_scan_dictionary_segment(std::shared_ptr<DictionarySegment<T>>& segment) {
+  Fail("Dictionary segment scan not yet implemented.");
+}
+
+template<typename T>
+void TableScan::_scan_reference_segment(ChunkID chunk_id, std::shared_ptr<ReferenceSegment>& segment) {
+  const auto selector = Selector<T>(scan_type(), type_cast<T>(search_value()));
+  const auto values_count = segment->size();
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_count; ++chunk_offset) {
+    // TODO: We are not supposed to do that.
+    const auto all_type_variant = segment->operator[](chunk_offset);
+    if (variant_is_null(all_type_variant)) {
+      continue;
+    }
+    const auto value = type_cast<T>(all_type_variant);
+    if (selector.selects(value)) {
+      _emit(chunk_id, chunk_offset);
+    }
+  }
+}
+
 
 }
