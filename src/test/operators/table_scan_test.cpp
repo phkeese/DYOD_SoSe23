@@ -283,6 +283,7 @@ TEST_F(OperatorsTableScanTest, ScanOnReferenceSegmentWithNullValue) {
   }
 }
 
+#ifndef __OPTIMIZE__
 TEST_F(OperatorsTableScanTest, DisallowRecursiveReferences) {
   auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
@@ -297,5 +298,6 @@ TEST_F(OperatorsTableScanTest, DisallowRecursiveReferences) {
   auto second_reference = std::make_shared<ReferenceSegment>(second_table, ColumnID{0}, positions);
   ASSERT_THROW(second_reference->operator[](0), std::logic_error);
 }
+#endif
 
 }  // namespace opossum

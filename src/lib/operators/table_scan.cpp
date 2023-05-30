@@ -1,13 +1,27 @@
+#include <optional>
 #include "table_scan.hpp"
-#include "../all_type_variant.hpp"
-#include "../storage/table.hpp"
-#include "../storage/dictionary_segment.hpp"
-#include "../storage/reference_segment.hpp"
-#include "../storage/value_segment.hpp"
-#include "../types.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {
+
+namespace {
+
+template<typename ConditionCallback, typename EmitCallback>
+void _select_in_dictionary_segment(
+    const std::shared_ptr<const AbstractAttributeVector>& value_ids,
+    const ValueID null_value_id,
+    const ConditionCallback condition_callback,
+    const EmitCallback emit_callback) {
+  const auto value_id_count = value_ids->size();
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < value_id_count; ++chunk_offset) {
+    const auto value_id = value_ids->get(chunk_offset);
+    if (value_id != null_value_id && condition_callback(value_id)) {
+      emit_callback(chunk_offset);
+    }
+  }
+}
+
+}
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const ScanType scan_type,
           const AllTypeVariant search_value) : AbstractOperator(in), _column_id{column_id}, _scan_type{scan_type}, _search_value{search_value} {
@@ -28,8 +42,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     _result_table->add_column_definition(input->column_name(column_id), input->column_type(column_id), input->column_nullable(column_id));
-//    const auto reference_segment = std::make_shared<ReferenceSegment>(input, column_id, _pos_list);
-//    initial_result_chunk->add_segment(reference_segment);
   }
 
   resolve_data_type(_left_input_table()->column_type(column_id()), [this] (auto type) {
@@ -49,6 +61,10 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
 void TableScan::_emit(ChunkID chunk_id, ChunkOffset offset) {
   _pos_list->emplace_back(RowID{chunk_id, offset});
+}
+
+void TableScan::_emit(const RowID& row_id) {
+  _pos_list->emplace_back(row_id);
 }
 
 template <typename Type>
@@ -94,18 +110,76 @@ template<typename T>
 void TableScan::_scan_dictionary_segment(ChunkID chunk_id, const std::shared_ptr<DictionarySegment<T>>& segment) {
   const auto value_ids = segment->attribute_vector();
   const auto dictionary = segment->dictionary();
-  const auto selector = Selector<T>(scan_type(), type_cast<T>(search_value()));
-  const auto values_count = segment->size();
 
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_count; ++chunk_offset) {
-    const auto value_id = value_ids->get(chunk_offset);
-    if (value_id == segment->null_value_id()) {
-      continue;
-    }
-    const auto value = segment->get(chunk_offset);
-    if (selector.selects(value)) {
-      _emit(chunk_id, chunk_offset);
-    }
+  const auto upper_bound_value_id = segment->upper_bound(search_value());
+  const auto lower_bound_value_id = segment->lower_bound(search_value());
+  const auto lower_bound_equals_upper_bound = upper_bound_value_id == lower_bound_value_id;
+
+  const auto emit_callback = [this, &chunk_id](const ChunkOffset chunk_offset) {
+    _emit(chunk_id, chunk_offset);
+  };
+
+  switch (_scan_type) {
+    case ScanType::OpEquals:
+      if (!lower_bound_equals_upper_bound) {
+        _select_in_dictionary_segment(
+            value_ids,
+            segment->null_value_id(),
+            [&](const ValueID value_id) {
+              return value_id == lower_bound_value_id;
+            },
+            emit_callback);
+      }
+      break;
+    case ScanType::OpNotEquals:
+      _select_in_dictionary_segment(
+          value_ids,
+          segment->null_value_id(),
+          [&](const ValueID value_id) {
+            return lower_bound_equals_upper_bound || value_id != lower_bound_value_id;
+          },
+          emit_callback);
+      break;
+    case ScanType::OpGreaterThan:
+      _select_in_dictionary_segment(
+          value_ids,
+          segment->null_value_id(),
+          [&](const ValueID value_id) {
+            return value_id >= upper_bound_value_id;
+          },
+          emit_callback);
+      break;
+    case ScanType::OpGreaterThanEquals:
+      _select_in_dictionary_segment(
+          value_ids,
+          segment->null_value_id(),
+          [&](const ValueID value_id) {
+            return value_id >= lower_bound_value_id;
+          },
+          emit_callback);
+      break;
+    case ScanType::OpLessThan:
+      _select_in_dictionary_segment(
+          value_ids,
+          segment->null_value_id(),
+          [&](const ValueID value_id) {
+            return value_id < lower_bound_value_id;
+          },
+          emit_callback);
+      break;
+    case ScanType::OpLessThanEquals:
+      _select_in_dictionary_segment(
+          value_ids,
+          segment->null_value_id(),
+          [&](const ValueID value_id) {
+            return value_id < upper_bound_value_id;
+          },
+          emit_callback);
+      break;
+    default:
+      // TODO: Include _scan_type in error message
+      Fail("Could not match any possible ScanType. ScanType with name " + typeid(_search_value).name() + " is not supported.");
+      break;
   }
 }
 
@@ -113,15 +187,11 @@ template<typename T>
 void TableScan::_scan_reference_segment(ChunkID chunk_id, const std::shared_ptr<ReferenceSegment>& segment) {
   const auto selector = Selector<T>(scan_type(), type_cast<T>(search_value()));
   const auto values_count = segment->size();
+  const auto pos_list = segment->pos_list();
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_count; ++chunk_offset) {
     const auto value = segment->_get_typed_value<T>(chunk_offset);
     if (value && selector.selects(value.value())) {
-
-    }
-    // TODO: We are not supposed to do that.
-    const auto all_type_variant = segment->operator[](chunk_offset);
-    if (variant_is_null(all_type_variant)) {
-      continue;
+      _emit(pos_list->operator[](chunk_offset));
     }
   }
 }

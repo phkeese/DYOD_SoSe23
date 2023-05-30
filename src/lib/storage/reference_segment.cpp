@@ -1,8 +1,6 @@
 #include "reference_segment.hpp"
 
 #include "storage/table.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/dictionary_segment.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -45,29 +43,6 @@ ColumnID ReferenceSegment::referenced_column_id() const {
 
 size_t ReferenceSegment::estimate_memory_usage() const {
   return sizeof(*this);
-}
-
-
-template<typename T>
-std::optional<T> ReferenceSegment::_get_typed_value(const ChunkOffset chunk_offset) const {
-  Assert(chunk_offset < size(), "Chunk offset " + std::to_string(chunk_offset) + " is out of bounds.");
-  const auto row_id = pos_list()->operator[](chunk_offset);
-
-  if (row_id.is_null()) {
-    return NULL_VALUE;
-  }
-
-  const auto chunk = referenced_table()->get_chunk(row_id.chunk_id);
-  const auto segment = chunk->get_segment(referenced_column_id());
-
-  if (const auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment)) {
-    return value_segment->get_typed_value(chunk_offset);
-  }
-  if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
-    return dictionary_segment->get_typed_value(chunk_offset);
-  }
-  Fail("Could not convert underlying segment of ReferenceSegment.");
-
 }
 
 }  // namespace opossum

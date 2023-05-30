@@ -22,6 +22,7 @@ class TableScan : public AbstractOperator {
 
  protected:
   void _emit(ChunkID chunk_id, ChunkOffset offset);
+  void _emit(const RowID& row_id);
 
   std::shared_ptr<const Table> _on_execute() override;
   template<typename T>
@@ -67,14 +68,6 @@ struct Selector {
         // TODO: Better error, with value
         Fail("Could not match any possible ScanType. ScanType with name " + typeid(_search_value).name() + " is not supported.");
     }
-  }
-
-  T search_value() const {
-    return _search_value;
-  }
-
-  ScanType scan_type() const {
-    return _scan_type;
   }
 
  private:
