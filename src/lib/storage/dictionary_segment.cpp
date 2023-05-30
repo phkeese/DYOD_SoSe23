@@ -111,7 +111,7 @@ const T DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {;
 template <typename T>
 ValueID DictionarySegment<T>::lower_bound(const T value) const {
   const auto it = std::lower_bound(dictionary().begin(), dictionary().end(), value);
-  if (it == dictionary().end() || *it > value) {
+  if (it == dictionary().end()) {
     return INVALID_VALUE_ID;
   }
   return ValueID(std::distance(dictionary().begin(), it));
