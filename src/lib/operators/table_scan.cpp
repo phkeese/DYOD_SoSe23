@@ -160,7 +160,7 @@ void TableScan::_scan_abstract_segment(ChunkID chunk_id, std::shared_ptr<Abstrac
   if (auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment)) {
     _scan_value_segment(chunk_id, value_segment);
   } else if (auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
-    _scan_dictionary_segment(dictionary_segment);
+    _scan_dictionary_segment(chunk_id, dictionary_segment);
   } else if (auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
     _scan_reference_segment<T>(chunk_id, reference_segment);
   } else {
@@ -184,8 +184,22 @@ void TableScan::_scan_value_segment(ChunkID chunk_id, std::shared_ptr<ValueSegme
 }
 
 template<typename T>
-void TableScan::_scan_dictionary_segment(std::shared_ptr<DictionarySegment<T>>& segment) {
-  Fail("Dictionary segment scan not yet implemented.");
+void TableScan::_scan_dictionary_segment(ChunkID chunk_id, std::shared_ptr<DictionarySegment<T>>& segment) {
+  const auto value_ids = segment->attribute_vector();
+  const auto dictionary = segment->dictionary();
+  const auto selector = Selector<T>(scan_type(), type_cast<T>(search_value()));
+  const auto values_count = segment->size();
+
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < values_count; ++chunk_offset) {
+    const auto value_id = value_ids->get(chunk_offset);
+    if (value_id == segment->null_value_id()) {
+      continue;
+    }
+    const auto value = segment->get(chunk_offset);
+    if (selector.selects(value)) {
+      _emit(chunk_id, chunk_offset);
+    }
+  }
 }
 
 template<typename T>
