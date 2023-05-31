@@ -55,6 +55,12 @@ void TableScan::_emit(const RowID& row_id) {
 
 template <typename Type>
 void TableScan::_scan_table() {
+  // Validate that search_value is of the target type (or NULL_VALUE).
+  // Comparison is taken from type_cast function.
+  Assert(variant_is_null(search_value()) ||
+             static_cast<size_t>(search_value().which()) == detail::index_of(types_including_null, hana::type_c<Type>),
+         "Cannot compare values of incompatible types: search_value is type " + std::to_string(search_value().which())
+             + ", Type is " + std::to_string(detail::index_of(types_including_null, hana::type_c<Type>)));
   // Scan each segment.
   const auto chunk_count = _left_input_table()->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {

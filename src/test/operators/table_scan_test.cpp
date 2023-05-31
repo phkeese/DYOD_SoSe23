@@ -239,7 +239,7 @@ TEST_F(OperatorsTableScanTest, ScanWithEmptyInput) {
   EXPECT_EQ(scan_1->get_output()->row_count(), static_cast<size_t>(0));
 
   // Scan_1 produced an empty result.
-  auto scan_2 = std::make_shared<opossum::TableScan>(scan_1, ColumnID{1}, ScanType::OpEquals, 456.7);
+  auto scan_2 = std::make_shared<opossum::TableScan>(scan_1, ColumnID{1}, ScanType::OpEquals, 456.7f);
   scan_2->execute();
 
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(0));
@@ -369,7 +369,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictSegmentOnColumnWithOnlyNull) {
 }
 
 TEST_F(OperatorsTableScanTest, ScanForNullOnValueSegment) {
-  // We do not need to check for a non existing value, because that happens automatically when we scan the second chunk.
+  // We do not need to check for a non-existing value, because that happens automatically when we scan the second chunk.
 
   auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
   tests[ScanType::OpEquals] = {};
@@ -460,6 +460,57 @@ TEST_F(OperatorsTableScanTest, ScanForNullOnReferenceSegment) {
 
     ASSERT_COLUMN_EQ(scan_2->get_output(), ColumnID{0}, test.second);
   }
+}
+
+TEST_F(OperatorsTableScanTest, CallingGetOutputWithoutExecuteThrows) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1);
+  EXPECT_THROW(scan_1->get_output(), std::logic_error);
+}
+
+TEST_F(OperatorsTableScanTest, IncomparableTypes) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  const auto incompatible_values = std::vector<AllTypeVariant>{1.0, 1.0f, 1l, "1"};
+
+  for (const auto& incompatible_value : incompatible_values) {
+    auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0},
+                                              ScanType::OpGreaterThanEquals, incompatible_value);
+    EXPECT_THROW(scan_1->execute(), std::logic_error);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, SegmentsHaveEqualSize) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1);
+  scan_1->execute();
+
+  const auto result_chunk = scan_1->get_output()->get_chunk(ChunkID{0});
+  EXPECT_EQ(result_chunk->get_segment(ColumnID{0})->size(), result_chunk->get_segment(ColumnID{1})->size());
+}
+
+TEST_F(OperatorsTableScanTest, SegmentsSharePosList) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1);
+  scan_1->execute();
+
+  const auto result_chunk = scan_1->get_output()->get_chunk(ChunkID{0});
+  const auto reference_segments = std::vector{
+      std::dynamic_pointer_cast<ReferenceSegment>(result_chunk->get_segment(ColumnID{0})),
+      std::dynamic_pointer_cast<ReferenceSegment>(result_chunk->get_segment(ColumnID{0}))
+  };
+  EXPECT_EQ(reference_segments[0]->pos_list(), reference_segments[1]->pos_list());
 }
 
 }  // namespace opossum
