@@ -82,7 +82,7 @@ void TableScan::_scan_abstract_segment(const ChunkID chunk_id, const std::shared
 template<typename T>
 void TableScan::_scan_value_segment(const ChunkID chunk_id, const std::shared_ptr<ValueSegment<T>>& segment) {
   if (variant_is_null(search_value())) {
-    _scan_for_null_value(chunk_id, segment);
+    _scan_for_null_value<ValueSegment<T>, T>(chunk_id, segment);
     return;
   }
   const auto selector = Selector<T>(scan_type(), type_cast<T>(search_value()));
@@ -99,7 +99,7 @@ void TableScan::_scan_value_segment(const ChunkID chunk_id, const std::shared_pt
 template<typename T>
 void TableScan::_scan_dictionary_segment(const ChunkID chunk_id, const std::shared_ptr<DictionarySegment<T>>& segment) {
   if (variant_is_null(search_value())) {
-    _scan_for_null_value(chunk_id, segment);
+    _scan_for_null_value<DictionarySegment<T>, T>(chunk_id, segment);
     return;
   }
   const auto value_ids = segment->attribute_vector();
@@ -118,25 +118,11 @@ void TableScan::_scan_dictionary_segment(const ChunkID chunk_id, const std::shar
 
 template<typename T>
 void TableScan::_scan_reference_segment(const std::shared_ptr<ReferenceSegment>& segment) {
-  const auto search_null_value = variant_is_null(search_value());
   const auto segment_size = segment->size();
   const auto pos_list = segment->pos_list();
 
-  if (search_null_value && scan_type() != ScanType::OpNotEquals) {
-    return;
-  }
-
-  // Cannot be done in lower for loop, because type_cast failed on NULL_VALUES.
-  if (search_null_value) {
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < segment_size; ++chunk_offset) {
-      const auto value = segment->_get_typed_value<T>(chunk_offset);
-      // We don't want to match NULL, regardless of the condition.
-      if (value) {
-        // Emit using the existing PosList.
-        // This way, we are able to omit ReferenceSegments referencing ReferenceSegments.
-        _emit(pos_list->operator[](chunk_offset));
-      }
-    }
+  if (variant_is_null(search_value())) {
+    _scan_for_null_value<ReferenceSegment, T>(ChunkID{0}, segment, pos_list);
     return;
   }
 
@@ -152,16 +138,25 @@ void TableScan::_scan_reference_segment(const std::shared_ptr<ReferenceSegment>&
   }
 }
 
-template<typename SegmentType>
-void TableScan::_scan_for_null_value(const ChunkID chunk_id, const std::shared_ptr<SegmentType>& segment) {
+template<typename SegmentType, typename T>
+void TableScan::_scan_for_null_value(const ChunkID chunk_id, const std::shared_ptr<SegmentType>& segment, const std::shared_ptr<const PosList>& pos_list) {
   if (scan_type() != ScanType::OpNotEquals) {
     return;
   }
   const auto segment_size = segment->size();
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < segment_size; ++chunk_offset) {
-    const auto value = segment->get_typed_value(chunk_offset);
-    if (value) {
-      _emit(chunk_id, chunk_offset);
+    if constexpr (std::is_base_of<ReferenceSegment, SegmentType>::value) {
+      const auto value = segment->template _get_typed_value<T>(chunk_offset);
+      if (value) {
+        _emit(pos_list->operator[](chunk_offset));
+      }
+    } else {
+      // Don't use early return, because the compiler would look for get_typed_value in ReferenceSegment,
+      // which result in an error.
+      const auto value = segment->get_typed_value(chunk_offset);
+      if (value) {
+        _emit(chunk_id, chunk_offset);
+      }
     }
   }
 }

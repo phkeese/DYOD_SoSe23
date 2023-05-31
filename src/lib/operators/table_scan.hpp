@@ -40,8 +40,8 @@ class TableScan : public AbstractOperator {
   template<typename T>
   void _scan_reference_segment(const std::shared_ptr<ReferenceSegment>& segment);
 
-  template<typename SegmentType>
-  void _scan_for_null_value(const ChunkID chunk_id, const std::shared_ptr<SegmentType>& segment);
+  template<typename SegmentType, typename T>
+  void _scan_for_null_value(const ChunkID chunk_id, const std::shared_ptr<SegmentType>& segment, const std::shared_ptr<const PosList>& pos_list = nullptr);
 
   ColumnID _column_id;
   ScanType _scan_type;
