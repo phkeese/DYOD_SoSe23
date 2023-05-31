@@ -2,10 +2,10 @@
 
 #include <optional>
 #include "abstract_segment.hpp"
-#include "utils/assert.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
-#include "storage/dictionary_segment.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -28,9 +28,8 @@ class ReferenceSegment : public AbstractSegment {
 
   size_t estimate_memory_usage() const final;
 
-
  protected:
-  template<typename T>
+  template <typename T>
   std::optional<T> _get_typed_value(const ChunkOffset chunk_offset) const;
   const std::shared_ptr<const Table> _referenced_table;
   const std::shared_ptr<const PosList> _pos;
@@ -39,9 +38,8 @@ class ReferenceSegment : public AbstractSegment {
   friend class TableScan;
 };
 
-
 // Implemented in the .hpp for compiler reasons.
-template<typename T>
+template <typename T>
 std::optional<T> ReferenceSegment::_get_typed_value(const ChunkOffset chunk_offset) const {
   Assert(chunk_offset < size(), "Chunk offset " + std::to_string(chunk_offset) + " is out of bounds.");
   const auto row_id = pos_list()->operator[](chunk_offset);

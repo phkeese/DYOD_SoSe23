@@ -114,10 +114,14 @@ TEST_F(ReferenceSegmentTest, EstimateMemoryUsage) {
   auto pos_list = std::make_shared<PosList>();
   const auto reference_segment = ReferenceSegment(_test_table, ColumnID{0}, pos_list);
   constexpr auto alignment_bytes = 14;
-  EXPECT_EQ(reference_segment.estimate_memory_usage(), sizeof(std::shared_ptr<const Table>) + sizeof(std::shared_ptr<const PosList>) + sizeof(ColumnID) + alignment_bytes);
+  EXPECT_EQ(reference_segment.estimate_memory_usage(), sizeof(std::shared_ptr<const Table>) +
+                                                           sizeof(std::shared_ptr<const PosList>) + sizeof(ColumnID) +
+                                                           alignment_bytes);
   pos_list->push_back(RowID{ChunkID{0}, ChunkOffset{0}});
   // The size should not have changed as no data is actually held by the ReferenceSegment.
-  EXPECT_EQ(reference_segment.estimate_memory_usage(), sizeof(std::shared_ptr<const Table>) + sizeof(std::shared_ptr<const PosList>) + sizeof(ColumnID) + alignment_bytes);
+  EXPECT_EQ(reference_segment.estimate_memory_usage(), sizeof(std::shared_ptr<const Table>) +
+                                                           sizeof(std::shared_ptr<const PosList>) + sizeof(ColumnID) +
+                                                           alignment_bytes);
 }
 
 }  // namespace opossum

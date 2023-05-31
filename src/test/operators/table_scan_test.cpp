@@ -296,8 +296,7 @@ TEST_F(OperatorsTableScanTest, HandlesInvalidRowID) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(reference_table));
   table_wrapper->execute();
 
-  auto scan =
-      std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, -10);
+  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, -10);
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 0);
 }

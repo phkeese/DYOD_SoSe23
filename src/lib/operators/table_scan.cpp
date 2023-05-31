@@ -6,10 +6,9 @@ namespace opossum {
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id,
                      const ScanType scan_type, const AllTypeVariant search_value)
     : AbstractOperator(in), _column_id{column_id}, _scan_type{scan_type}, _search_value{search_value} {
-    DebugAssert(_left_input != nullptr, "TableScan operator requires a left input.");
-    DebugAssert(_right_input == nullptr, "There should not be a right input for the TableScan operator.");
+  DebugAssert(_left_input != nullptr, "TableScan operator requires a left input.");
+  DebugAssert(_right_input == nullptr, "There should not be a right input for the TableScan operator.");
 }
-
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
   _result_table = std::make_shared<Table>();
@@ -26,7 +25,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   }
 
   // Find the correct data type and scan with this knowledge.
-  resolve_data_type(_left_input_table()->column_type(column_id()), [this] (auto type) {
+  resolve_data_type(_left_input_table()->column_type(column_id()), [this](auto type) {
     using Type = typename decltype(type)::type;
     _scan_table<Type>();
   });
@@ -73,13 +72,13 @@ void TableScan::_scan_abstract_segment(const ChunkID chunk_id, const std::shared
   } else if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
     _scan_dictionary_segment(chunk_id, dictionary_segment);
   } else if (const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
-    _scan_reference_segment<T> (reference_segment);
+    _scan_reference_segment<T>(reference_segment);
   } else {
     Fail("Segment type is not supported.");
   }
 }
 
-template<typename T>
+template <typename T>
 void TableScan::_scan_value_segment(const ChunkID chunk_id, const std::shared_ptr<ValueSegment<T>>& segment) {
   if (variant_is_null(search_value())) {
     _scan_for_null_value<ValueSegment<T>, T>(chunk_id, segment);
@@ -96,7 +95,7 @@ void TableScan::_scan_value_segment(const ChunkID chunk_id, const std::shared_pt
   }
 }
 
-template<typename T>
+template <typename T>
 void TableScan::_scan_dictionary_segment(const ChunkID chunk_id, const std::shared_ptr<DictionarySegment<T>>& segment) {
   if (variant_is_null(search_value())) {
     _scan_for_null_value<DictionarySegment<T>, T>(chunk_id, segment);
@@ -107,16 +106,14 @@ void TableScan::_scan_dictionary_segment(const ChunkID chunk_id, const std::shar
   const auto lower_bound_value_id = segment->lower_bound(search_value());
   const auto upper_bound_value_id = segment->upper_bound(search_value());
 
-  const auto emit_callback = [this, &chunk_id](const ChunkOffset chunk_offset) {
-    _emit(chunk_id, chunk_offset);
-  };
+  const auto emit_callback = [this, &chunk_id](const ChunkOffset chunk_offset) { _emit(chunk_id, chunk_offset); };
 
   const auto selector =
       DictionarySegmentSelector(scan_type(), search_value(), emit_callback, value_ids, segment->null_value_id());
   selector.select(lower_bound_value_id, upper_bound_value_id);
 }
 
-template<typename T>
+template <typename T>
 void TableScan::_scan_reference_segment(const std::shared_ptr<ReferenceSegment>& segment) {
   const auto segment_size = segment->size();
   const auto pos_list = segment->pos_list();
@@ -138,8 +135,9 @@ void TableScan::_scan_reference_segment(const std::shared_ptr<ReferenceSegment>&
   }
 }
 
-template<typename SegmentType, typename T>
-void TableScan::_scan_for_null_value(const ChunkID chunk_id, const std::shared_ptr<SegmentType>& segment, const std::shared_ptr<const PosList>& pos_list) {
+template <typename SegmentType, typename T>
+void TableScan::_scan_for_null_value(const ChunkID chunk_id, const std::shared_ptr<SegmentType>& segment,
+                                     const std::shared_ptr<const PosList>& pos_list) {
   if (scan_type() != ScanType::OpNotEquals) {
     return;
   }
