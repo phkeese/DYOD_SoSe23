@@ -119,6 +119,7 @@ ValueID DictionarySegment<T>::lower_bound(const T value) const {
 
 template <typename T>
 ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
+  Assert(!variant_is_null(value), "Cannot get lower bound of null value.");
   return ValueID(lower_bound(type_cast<T>(value)));
 }
 
@@ -133,6 +134,7 @@ ValueID DictionarySegment<T>::upper_bound(const T value) const {
 
 template <typename T>
 ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
+  Assert(!variant_is_null(value), "Cannot get upper bound of null value.");
   return upper_bound(type_cast<T>(value));
 }
 

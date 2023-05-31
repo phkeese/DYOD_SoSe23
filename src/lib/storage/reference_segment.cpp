@@ -7,7 +7,7 @@ namespace opossum {
 
 ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& referenced_table,
                                    const ColumnID referenced_column_id, const std::shared_ptr<const PosList>& pos)
-    : _referenced_table{referenced_table}, _referenced_column_id{referenced_column_id}, _pos{pos} {}
+    : _referenced_table{referenced_table}, _pos{pos}, _referenced_column_id{referenced_column_id} {}
 
 AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {
   Assert(chunk_offset < size(), "Chunk offset " + std::to_string(chunk_offset) + " is out of bounds.");

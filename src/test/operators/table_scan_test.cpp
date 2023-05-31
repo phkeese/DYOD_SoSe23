@@ -283,21 +283,82 @@ TEST_F(OperatorsTableScanTest, ScanOnReferenceSegmentWithNullValue) {
   }
 }
 
-#ifndef __OPTIMIZE__
-TEST_F(OperatorsTableScanTest, DisallowRecursiveReferences) {
+TEST_F(OperatorsTableScanTest, HandlesInvalidRowID) {
   auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
   auto positions = std::make_shared<PosList>();
-  positions->emplace_back(RowID{ChunkID{0}, 0});
-  auto first_reference = std::make_shared<ReferenceSegment>(table, ColumnID{0}, positions);
+  positions->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+  auto reference_segment = std::make_shared<ReferenceSegment>(table, ColumnID{0}, positions);
+  auto reference_table = std::make_shared<Table>();
+  reference_table->add_column_definition("int", "int", true);
+  reference_table->get_chunk(ChunkID{0})->add_segment(reference_segment);
 
-  auto second_table = std::make_shared<Table>();
-  second_table->add_column_definition("ref", "int", false);
-  second_table->get_chunk(ChunkID{0})->add_segment(first_reference);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(reference_table));
+  table_wrapper->execute();
 
-  auto second_reference = std::make_shared<ReferenceSegment>(second_table, ColumnID{0}, positions);
-  ASSERT_THROW(second_reference->operator[](0), std::logic_error);
+  auto scan =
+      std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, -10);
+  scan->execute();
+  EXPECT_EQ(scan->get_output()->row_count(), 0);
 }
-#endif
+
+TEST_F(OperatorsTableScanTest, EmptyResultScanReturnsEmptyChunk) {
+  auto scan_1 = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThan, 90000);
+  scan_1->execute();
+
+  EXPECT_EQ(scan_1->get_output()->row_count(), 0);
+}
+
+TEST_F(OperatorsTableScanTest, ScanOnColumnWithOnlyNull) {
+  // We do not need to check for a non existing value, because that happens automatically when we scan the second chunk.
+
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4);
+    scan->execute();
+
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, test.second);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanForNull) {
+  // We do not need to check for a non existing value, because that happens automatically when we scan the second chunk.
+
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {2, 3};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({2});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({3});
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, NULL_VALUE);
+    scan->execute();
+
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, test.second);
+  }
+}
 
 }  // namespace opossum

@@ -73,7 +73,7 @@ void TableScan::_scan_abstract_segment(const ChunkID chunk_id, const std::shared
   } else if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
     _scan_dictionary_segment(chunk_id, dictionary_segment);
   } else if (const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
-    _scan_reference_segment<T>(reference_segment);
+    _scan_reference_segment<T>(chunk_id, reference_segment);
   } else {
     Fail("Segment type is not supported.");
   }
@@ -81,6 +81,10 @@ void TableScan::_scan_abstract_segment(const ChunkID chunk_id, const std::shared
 
 template<typename T>
 void TableScan::_scan_value_segment(const ChunkID chunk_id, const std::shared_ptr<ValueSegment<T>>& segment) {
+  if (variant_is_null(search_value())) {
+    _scan_for_null_value(chunk_id, segment);
+    return;
+  }
   const auto selector = Selector<T>(scan_type(), type_cast<T>(search_value()));
   const auto segment_size = segment->size();
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < segment_size; ++chunk_offset) {
@@ -94,6 +98,10 @@ void TableScan::_scan_value_segment(const ChunkID chunk_id, const std::shared_pt
 
 template<typename T>
 void TableScan::_scan_dictionary_segment(const ChunkID chunk_id, const std::shared_ptr<DictionarySegment<T>>& segment) {
+  if (variant_is_null(search_value())) {
+    _scan_for_null_value(chunk_id, segment);
+    return;
+  }
   const auto value_ids = segment->attribute_vector();
 
   const auto lower_bound_value_id = segment->lower_bound(search_value());
@@ -109,7 +117,11 @@ void TableScan::_scan_dictionary_segment(const ChunkID chunk_id, const std::shar
 }
 
 template<typename T>
-void TableScan::_scan_reference_segment(const std::shared_ptr<ReferenceSegment>& segment) {
+void TableScan::_scan_reference_segment(const ChunkID chunk_id, const std::shared_ptr<ReferenceSegment>& segment) {
+//  if (variant_is_null(search_value())) {
+//    _scan_for_null_value(chunk_id, segment);
+//    return;
+//  }
   const auto selector = Selector<T>(scan_type(), type_cast<T>(search_value()));
   const auto segment_size = segment->size();
   const auto pos_list = segment->pos_list();
@@ -120,6 +132,22 @@ void TableScan::_scan_reference_segment(const std::shared_ptr<ReferenceSegment>&
       // Emit using the existing PosList.
       // This way, we are able to omit ReferenceSegments referencing ReferenceSegments.
       _emit(pos_list->operator[](chunk_offset));
+    }
+  }
+}
+
+
+// TODO(we): Don't use this for ReferenceSegment
+template<typename SegmentType>
+void TableScan::_scan_for_null_value(const ChunkID chunk_id, const std::shared_ptr<SegmentType>& segment) {
+  if (scan_type() != ScanType::OpNotEquals) {
+    return;
+  }
+  const auto segment_size = segment->size();
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < segment_size; ++chunk_offset) {
+    const auto value = segment->get_typed_value(chunk_offset);
+    if (value) {
+      _emit(chunk_id, chunk_offset);
     }
   }
 }

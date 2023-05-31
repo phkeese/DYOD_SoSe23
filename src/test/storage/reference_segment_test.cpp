@@ -6,6 +6,7 @@
 #include "operators/table_scan.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -90,6 +91,33 @@ TEST_F(ReferenceSegmentTest, RetrieveNullValueFromNullRowID) {
   EXPECT_EQ(ref_segment[ChunkOffset{1}], segment[ChunkOffset{1}]);
   EXPECT_TRUE(variant_is_null(ref_segment[ChunkOffset{2}]));
   EXPECT_EQ(ref_segment[ChunkOffset{3}], segment[ChunkOffset{2}]);
+}
+
+#ifndef __OPTIMIZE__
+TEST_F(ReferenceSegmentTest, DisallowRecursiveReferences) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+
+  auto positions = std::make_shared<PosList>();
+  positions->emplace_back(RowID{ChunkID{0}, 0});
+  auto first_reference = std::make_shared<ReferenceSegment>(table, ColumnID{0}, positions);
+
+  auto second_table = std::make_shared<Table>();
+  second_table->add_column_definition("ref", "int", false);
+  second_table->get_chunk(ChunkID{0})->add_segment(first_reference);
+
+  auto second_reference = std::make_shared<ReferenceSegment>(second_table, ColumnID{0}, positions);
+  ASSERT_THROW(second_reference->operator[](0), std::logic_error);
+}
+#endif
+
+TEST_F(ReferenceSegmentTest, EstimateMemoryUsage) {
+  auto pos_list = std::make_shared<PosList>();
+  const auto reference_segment = ReferenceSegment(_test_table, ColumnID{0}, pos_list);
+  constexpr auto alignment_bytes = 14;
+  EXPECT_EQ(reference_segment.estimate_memory_usage(), sizeof(std::shared_ptr<const Table>) + sizeof(std::shared_ptr<const PosList>) + sizeof(ColumnID) + alignment_bytes);
+  pos_list->push_back(RowID{ChunkID{0}, ChunkOffset{0}});
+  // The size should not have changed as no data is actually held by the ReferenceSegment.
+  EXPECT_EQ(reference_segment.estimate_memory_usage(), sizeof(std::shared_ptr<const Table>) + sizeof(std::shared_ptr<const PosList>) + sizeof(ColumnID) + alignment_bytes);
 }
 
 }  // namespace opossum
