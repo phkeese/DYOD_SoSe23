@@ -40,6 +40,7 @@ class ReferenceSegment : public AbstractSegment {
 };
 
 
+// Implemented in the .hpp for compiler reasons.
 template<typename T>
 std::optional<T> ReferenceSegment::_get_typed_value(const ChunkOffset chunk_offset) const {
   Assert(chunk_offset < size(), "Chunk offset " + std::to_string(chunk_offset) + " is out of bounds.");
