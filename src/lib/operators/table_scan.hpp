@@ -14,17 +14,11 @@ class TableScan : public AbstractOperator {
   TableScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const ScanType scan_type,
             const AllTypeVariant search_value);
 
-  inline ColumnID column_id() const {
-    return _column_id;
-  }
+  inline ColumnID column_id() const;
 
-  inline ScanType scan_type() const {
-    return _scan_type;
-  }
+  inline ScanType scan_type() const;
 
-  inline const AllTypeVariant& search_value() const {
-    return _search_value;
-  }
+  inline const AllTypeVariant& search_value() const;
 
  protected:
   void _emit(const ChunkID chunk_id, const ChunkOffset offset);
@@ -46,6 +40,10 @@ class TableScan : public AbstractOperator {
   template <typename T>
   void _scan_reference_segment(const std::shared_ptr<ReferenceSegment>& segment);
 
+  // When scanning for NULL_VALUE, we have to handle things differently:
+  // NULL_VALUE does not compare true against any value (including NULL_VALUE) unless we scan for inequality.
+  // In that case, every non-NULL_VALUE entry is emitted.
+  // The pos_list is required if and only if we scan a ReferenceSegment.
   template <typename SegmentType, typename T>
   void _scan_for_null_value(const ChunkID chunk_id, const std::shared_ptr<SegmentType>& segment,
                             const std::shared_ptr<const PosList>& pos_list = nullptr);

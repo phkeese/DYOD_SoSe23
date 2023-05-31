@@ -109,8 +109,9 @@ void TableScan::_scan_dictionary_segment(const ChunkID chunk_id, const std::shar
   }
   const auto value_ids = segment->attribute_vector();
 
-  const auto lower_bound_value_id = segment->lower_bound(search_value());
-  const auto upper_bound_value_id = segment->upper_bound(search_value());
+  const auto typed_search_value = type_cast<T>(search_value());
+  const auto lower_bound_value_id = segment->lower_bound(typed_search_value);
+  const auto upper_bound_value_id = segment->upper_bound(typed_search_value);
 
   const auto emit_callback = [this, &chunk_id](const ChunkOffset chunk_offset) { _emit(chunk_id, chunk_offset); };
 
@@ -145,24 +146,39 @@ template <typename SegmentType, typename T>
 void TableScan::_scan_for_null_value(const ChunkID chunk_id, const std::shared_ptr<SegmentType>& segment,
                                      const std::shared_ptr<const PosList>& pos_list) {
   if (scan_type() != ScanType::OpNotEquals) {
+    // Not scanning for inequality, nothing will compare true -> abort.
     return;
   }
   const auto segment_size = segment->size();
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < segment_size; ++chunk_offset) {
+    // Treat ReferenceSegment differently to reuse its PosList.
     if constexpr (std::is_base_of<ReferenceSegment, SegmentType>::value) {
+      DebugAssert(pos_list != nullptr, "pos_list must be provided when scanning a ReferenceSegment.");
       const auto value = segment->template _get_typed_value<T>(chunk_offset);
       if (value) {
         _emit(pos_list->operator[](chunk_offset));
       }
     } else {
-      // Don't use early return, because the compiler would look for get_typed_value in ReferenceSegment,
-      // which result in an error.
+      // We cannot use early return because the compiler would look for get_typed_value in ReferenceSegment,
+      // which results in an error.
       const auto value = segment->get_typed_value(chunk_offset);
       if (value) {
         _emit(chunk_id, chunk_offset);
       }
     }
   }
+}
+
+inline ColumnID TableScan::column_id() const {
+  return _column_id;
+}
+
+inline ScanType TableScan::scan_type() const {
+  return _scan_type;
+}
+
+inline const AllTypeVariant& TableScan::search_value() const {
+  return _search_value;
 }
 
 }  // namespace opossum
