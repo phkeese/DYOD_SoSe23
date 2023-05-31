@@ -97,7 +97,7 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
   auto scan_1 = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
   scan_1->execute();
 
-  auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnID{1}, ScanType::OpLessThan, 457.9);
+  auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnID{1}, ScanType::OpLessThan, 457.9f);
   scan_2->execute();
 
   EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
@@ -239,7 +239,7 @@ TEST_F(OperatorsTableScanTest, ScanWithEmptyInput) {
   EXPECT_EQ(scan_1->get_output()->row_count(), static_cast<size_t>(0));
 
   // Scan_1 produced an empty result.
-  auto scan_2 = std::make_shared<opossum::TableScan>(scan_1, ColumnID{1}, ScanType::OpEquals, 456.7);
+  auto scan_2 = std::make_shared<opossum::TableScan>(scan_1, ColumnID{1}, ScanType::OpEquals, 456.7f);
   scan_2->execute();
 
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(0));
@@ -281,6 +281,257 @@ TEST_F(OperatorsTableScanTest, ScanOnReferenceSegmentWithNullValue) {
 
     ASSERT_COLUMN_EQ(scan_2->get_output(), ColumnID{1}, test.second);
   }
+}
+
+TEST_F(OperatorsTableScanTest, HandlesInvalidRowID) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+
+  auto positions = std::make_shared<PosList>();
+  positions->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+  auto reference_segment = std::make_shared<ReferenceSegment>(table, ColumnID{0}, positions);
+  auto reference_table = std::make_shared<Table>();
+  reference_table->add_column_definition("int", "int", true);
+  reference_table->get_chunk(ChunkID{0})->add_segment(reference_segment);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(reference_table));
+  table_wrapper->execute();
+
+  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, -10);
+  scan->execute();
+  EXPECT_EQ(scan->get_output()->row_count(), 0);
+}
+
+TEST_F(OperatorsTableScanTest, EmptyResultScanReturnsEmptyChunk) {
+  auto scan_1 = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThan, 90000);
+  scan_1->execute();
+
+  EXPECT_EQ(scan_1->get_output()->row_count(), 0);
+}
+
+TEST_F(OperatorsTableScanTest, ScanOnValueSegmentOnColumnWithOnlyNull) {
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+
+  const auto table_wrapper_value_segment = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper_value_segment->execute();
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<TableScan>(table_wrapper_value_segment, ColumnID{0}, test.first, 4);
+    scan->execute();
+
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, test.second);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanOnDictSegmentOnColumnWithOnlyNull) {
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+
+  table_with_nulls->compress_chunk(ChunkID{0});
+
+  const auto table_wrapper_value_segment = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper_value_segment->execute();
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<TableScan>(table_wrapper_value_segment, ColumnID{0}, test.first, 4);
+    scan->execute();
+
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, test.second);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanOnReferenceSegmentOnColumnWithOnlyNull) {
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+  table_with_nulls->add_column("Index", "int", true);
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({1, NULL_VALUE});
+  table_with_nulls->append({2, NULL_VALUE});
+  table_with_nulls->append({3, NULL_VALUE});
+  table_with_nulls->append({4, NULL_VALUE});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper->execute();
+
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1);
+  scan_1->execute();
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<TableScan>(scan_1, ColumnID{1}, test.first, 4);
+    scan->execute();
+
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanForNullOnValueSegment) {
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {2, 3};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({2});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({3});
+
+  const auto table_wrapper_value_segment = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper_value_segment->execute();
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<TableScan>(table_wrapper_value_segment, ColumnID{0}, test.first, NULL_VALUE);
+    scan->execute();
+
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, test.second);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanForNullOnDictSegment) {
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {2, 3};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({2});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({3});
+
+  table_with_nulls->compress_chunk(ChunkID{0});
+
+  const auto table_wrapper_value_segment = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper_value_segment->execute();
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<TableScan>(table_wrapper_value_segment, ColumnID{0}, test.first, NULL_VALUE);
+    scan->execute();
+
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, test.second);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanForNullOnReferenceSegment) {
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {2, 4};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+
+  table_with_nulls->add_column("Not_null", "int", true);
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({1, NULL_VALUE});
+  table_with_nulls->append({2, 2});
+  table_with_nulls->append({3, NULL_VALUE});
+  table_with_nulls->append({4, 3});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper->execute();
+
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1);
+  scan_1->execute();
+
+  for (const auto& test : tests) {
+    auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnID{1}, test.first, NULL_VALUE);
+    scan_2->execute();
+
+    ASSERT_COLUMN_EQ(scan_2->get_output(), ColumnID{0}, test.second);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, CallingGetOutputWithoutExecuteThrows) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1);
+  EXPECT_THROW(scan_1->get_output(), std::logic_error);
+}
+
+TEST_F(OperatorsTableScanTest, IncorrectTypes) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  const auto incompatible_values = std::vector<AllTypeVariant>{1.0, 1.0f, 1l, "1"};
+
+  for (const auto& incompatible_value : incompatible_values) {
+    auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0},
+                                              ScanType::OpGreaterThanEquals, incompatible_value);
+    EXPECT_THROW(scan_1->execute(), std::logic_error);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, SegmentsHaveEqualSize) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1);
+  scan_1->execute();
+
+  const auto result_chunk = scan_1->get_output()->get_chunk(ChunkID{0});
+  EXPECT_EQ(result_chunk->get_segment(ColumnID{0})->size(), result_chunk->get_segment(ColumnID{1})->size());
+}
+
+TEST_F(OperatorsTableScanTest, SegmentsSharePosList) {
+  auto table = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1);
+  scan_1->execute();
+
+  const auto result_chunk = scan_1->get_output()->get_chunk(ChunkID{0});
+  const auto reference_segments = std::vector{
+      std::dynamic_pointer_cast<ReferenceSegment>(result_chunk->get_segment(ColumnID{0})),
+      std::dynamic_pointer_cast<ReferenceSegment>(result_chunk->get_segment(ColumnID{0}))
+  };
+  EXPECT_EQ(reference_segments[0]->pos_list(), reference_segments[1]->pos_list());
 }
 
 }  // namespace opossum

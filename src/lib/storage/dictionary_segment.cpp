@@ -1,6 +1,7 @@
 #include "dictionary_segment.hpp"
 #include <set>
 
+#include "abstract_attribute_vector.hpp"
 #include "fixed_width_integer_vector.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
@@ -102,7 +103,7 @@ ValueID DictionarySegment<T>::null_value_id() const {
 }
 
 template <typename T>
-const T DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {;
+const T DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
   DebugAssert(value_id < dictionary().size(), "ValueID " + std::to_string(value_id) + " is out of range.");
   return dictionary()[value_id];
 }
@@ -118,6 +119,7 @@ ValueID DictionarySegment<T>::lower_bound(const T value) const {
 
 template <typename T>
 ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
+  Assert(!variant_is_null(value), "Cannot get lower bound of null value.");
   return ValueID(lower_bound(type_cast<T>(value)));
 }
 
@@ -132,6 +134,7 @@ ValueID DictionarySegment<T>::upper_bound(const T value) const {
 
 template <typename T>
 ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
+  Assert(!variant_is_null(value), "Cannot get upper bound of null value.");
   return upper_bound(type_cast<T>(value));
 }
 

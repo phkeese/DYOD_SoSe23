@@ -107,4 +107,14 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   EXPECT_EQ(print_lengths.at(1), max);
 }
 
+TEST_F(OperatorsPrintTest, StaticTablePrintMethod) {
+  auto table = std::shared_ptr<const Table>(StorageManager::get().get_table(_table_name));
+  Print::print(table, _output);
+  std::ostringstream other_output;
+  auto print = std::make_shared<Print>(_get_table_oper, other_output);
+  print->execute();
+  // We assume that the operator has already been tested.
+  EXPECT_EQ(_output.str(), other_output.str());
+}
+
 }  // namespace opossum
