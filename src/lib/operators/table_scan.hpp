@@ -38,7 +38,7 @@ class TableScan : public AbstractOperator {
   void _scan_dictionary_segment(const ChunkID chunk_id, const std::shared_ptr<DictionarySegment<T>>& segment);
 
   template<typename T>
-  void _scan_reference_segment(const ChunkID chunk_id, const std::shared_ptr<ReferenceSegment>& segment);
+  void _scan_reference_segment(const std::shared_ptr<ReferenceSegment>& segment);
 
   template<typename SegmentType>
   void _scan_for_null_value(const ChunkID chunk_id, const std::shared_ptr<SegmentType>& segment);

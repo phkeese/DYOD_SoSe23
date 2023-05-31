@@ -309,7 +309,7 @@ TEST_F(OperatorsTableScanTest, EmptyResultScanReturnsEmptyChunk) {
   EXPECT_EQ(scan_1->get_output()->row_count(), 0);
 }
 
-TEST_F(OperatorsTableScanTest, ScanOnColumnWithOnlyNull) {
+TEST_F(OperatorsTableScanTest, ScanOnValueSegmentOnColumnWithOnlyNull) {
   // We do not need to check for a non existing value, because that happens automatically when we scan the second chunk.
 
   auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
@@ -327,15 +327,49 @@ TEST_F(OperatorsTableScanTest, ScanOnColumnWithOnlyNull) {
   table_with_nulls->append({NULL_VALUE});
   table_with_nulls->append({NULL_VALUE});
 
+  const auto table_wrapper_value_segment = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper_value_segment->execute();
+
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4);
+    auto scan = std::make_shared<TableScan>(table_wrapper_value_segment, ColumnID{0}, test.first, 4);
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, test.second);
   }
 }
 
-TEST_F(OperatorsTableScanTest, ScanForNull) {
+TEST_F(OperatorsTableScanTest, ScanOnDictSegmentOnColumnWithOnlyNull) {
+  // We do not need to check for a non existing value, because that happens automatically when we scan the second chunk.
+
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({NULL_VALUE});
+
+  table_with_nulls->compress_chunk(ChunkID{0});
+
+  const auto table_wrapper_value_segment = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper_value_segment->execute();
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<TableScan>(table_wrapper_value_segment, ColumnID{0}, test.first, 4);
+    scan->execute();
+
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, test.second);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanForNullOnValueSegment) {
   // We do not need to check for a non existing value, because that happens automatically when we scan the second chunk.
 
   auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
@@ -353,11 +387,79 @@ TEST_F(OperatorsTableScanTest, ScanForNull) {
   table_with_nulls->append({NULL_VALUE});
   table_with_nulls->append({3});
 
+  const auto table_wrapper_value_segment = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper_value_segment->execute();
+
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, NULL_VALUE);
+    auto scan = std::make_shared<TableScan>(table_wrapper_value_segment, ColumnID{0}, test.first, NULL_VALUE);
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, test.second);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanForNullOnDictSegment) {
+  // We do not need to check for a non existing value, because that happens automatically when we scan the second chunk.
+
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {2, 3};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({2});
+  table_with_nulls->append({NULL_VALUE});
+  table_with_nulls->append({3});
+
+  table_with_nulls->compress_chunk(ChunkID{0});
+
+  const auto table_wrapper_value_segment = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper_value_segment->execute();
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<TableScan>(table_wrapper_value_segment, ColumnID{0}, test.first, NULL_VALUE);
+    scan->execute();
+
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, test.second);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanForNullOnReferenceSegment) {
+  // We do not need to check for a non existing value, because that happens automatically when we scan the second chunk.
+
+  auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{};
+  tests[ScanType::OpEquals] = {};
+  tests[ScanType::OpNotEquals] = {2, 4};
+  tests[ScanType::OpLessThan] = {};
+  tests[ScanType::OpLessThanEquals] = {};
+  tests[ScanType::OpGreaterThan] = {};
+  tests[ScanType::OpGreaterThanEquals] = {};
+
+  auto table_with_nulls = std::make_shared<Table>();
+
+  table_with_nulls->add_column("Not_null", "int", true);
+  table_with_nulls->add_column("Null", "int", true);
+  table_with_nulls->append({1, NULL_VALUE});
+  table_with_nulls->append({2, 2});
+  table_with_nulls->append({3, NULL_VALUE});
+  table_with_nulls->append({4, 3});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(std::move(table_with_nulls));
+  table_wrapper->execute();
+
+  auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1);
+  scan_1->execute();
+
+  for (const auto& test : tests) {
+    auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnID{1}, test.first, NULL_VALUE);
+    scan_2->execute();
+
+    ASSERT_COLUMN_EQ(scan_2->get_output(), ColumnID{0}, test.second);
   }
 }
 
