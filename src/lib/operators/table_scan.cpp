@@ -1,4 +1,3 @@
-#include <optional>
 #include "table_scan.hpp"
 #include "resolve_type.hpp"
 
@@ -21,18 +20,19 @@ void _select_in_dictionary_segment(
   }
 }
 
-}
+}  // namespace
 
-TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const ScanType scan_type,
-          const AllTypeVariant search_value) : AbstractOperator(in), _column_id{column_id}, _scan_type{scan_type}, _search_value{search_value} {
+TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id,
+                     const ScanType scan_type, const AllTypeVariant search_value)
+    : AbstractOperator(in), _column_id{column_id}, _scan_type{scan_type}, _search_value{search_value} {
     DebugAssert(_left_input != nullptr, "TableScan operator requires a left input.");
     DebugAssert(_right_input == nullptr, "There should not be a right input for the table scan operator.");
 }
 
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
-   _result_table = std::make_shared<Table>();
-   _pos_list = std::make_shared<PosList>();
+  _result_table = std::make_shared<Table>();
+  _pos_list = std::make_shared<PosList>();
   const auto initial_result_chunk = _result_table->get_chunk(ChunkID{0});
 
 
@@ -41,7 +41,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   const auto column_count = input->column_count();
 
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    _result_table->add_column_definition(input->column_name(column_id), input->column_type(column_id), input->column_nullable(column_id));
+    _result_table->add_column_definition(input->column_name(column_id), input->column_type(column_id),
+                                         input->column_nullable(column_id));
   }
 
   resolve_data_type(_left_input_table()->column_type(column_id()), [this] (auto type) {
@@ -177,8 +178,9 @@ void TableScan::_scan_dictionary_segment(ChunkID chunk_id, const std::shared_ptr
           emit_callback);
       break;
     default:
-      // TODO: Include _scan_type in error message
-      Fail("Could not match any possible ScanType. ScanType with name " + typeid(_search_value).name() + " is not supported.");
+      // TODO(we): Include _scan_type in error message
+      Fail("Could not match any possible ScanType. ScanType with name " +
+           typeid(_search_value).name() + " is not supported.");
       break;
   }
 }
@@ -197,4 +199,4 @@ void TableScan::_scan_reference_segment(ChunkID chunk_id, const std::shared_ptr<
 }
 
 
-}
+}  // namespace opossum

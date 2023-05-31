@@ -20,7 +20,8 @@ AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) cons
   const auto chunk = referenced_table()->get_chunk(row_id.chunk_id);
   const auto segment = chunk->get_segment(referenced_column_id());
 
-  DebugAssert(!std::dynamic_pointer_cast<ReferenceSegment>(segment), "ReferenceSegment only supports referencing ValueSegment or DictionarySegment.");
+  DebugAssert(!std::dynamic_pointer_cast<ReferenceSegment>(segment),
+          "ReferenceSegment only supports referencing ValueSegment or DictionarySegment.");
 
   return segment->operator[](row_id.chunk_offset);
 }

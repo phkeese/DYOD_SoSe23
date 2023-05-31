@@ -1,15 +1,13 @@
 #pragma once
 
-#include "abstract_segment.hpp"
 #include <optional>
+#include "abstract_segment.hpp"
 #include "utils/assert.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 
 namespace opossum {
-
-//class Table;
 
 // ReferenceSegment is a specific segment type that stores all its values as position list of a referenced column.
 class ReferenceSegment : public AbstractSegment {
@@ -61,7 +59,6 @@ std::optional<T> ReferenceSegment::_get_typed_value(const ChunkOffset chunk_offs
     return dictionary_segment->get_typed_value(row_id.chunk_offset);
   }
   Fail("Could not convert underlying segment of ReferenceSegment.");
-
 }
 
 }  // namespace opossum
